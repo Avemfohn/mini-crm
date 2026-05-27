@@ -116,3 +116,6 @@ SPECTACULAR_SETTINGS = {
 }
 
 DEMO_USER_PASSWORD = env_str("DEMO_USER_PASSWORD", "demo1234")
+
+# Family deployment: every logged-in user sees and edits all projects.
+SHARED_PROJECT_ACCESS = env_bool("SHARED_PROJECT_ACCESS", default=True)

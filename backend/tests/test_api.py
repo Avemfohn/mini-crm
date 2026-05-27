@@ -217,7 +217,7 @@ class TestProjects:
         assert response.status_code == 200
         assert len(response.data["results"]) == 0
 
-    def test_create_project_adds_admin_membership(self, api_client, admin_user, roles):
+    def test_create_project_adds_contractor_membership(self, api_client, admin_user, roles):
         auth_client(api_client, admin_user)
         response = api_client.post(
             "/api/v1/projects/",
@@ -229,7 +229,7 @@ class TestProjects:
         assert ProjectMembership.objects.filter(
             user=admin_user,
             project_id=project_id,
-            role=roles[RoleCode.ADMIN],
+            role=roles[RoleCode.CONTRACTOR],
         ).exists()
 
     def test_create_project_seeds_block_and_categories(self, api_client, admin_user, roles):

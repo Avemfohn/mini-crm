@@ -11,7 +11,7 @@ import {
 import { fetchMe, login as apiLogin } from "@/lib/api/client";
 import type { MeResponse } from "@/lib/api/types";
 import { clearTokens, getRefreshToken, setAccessToken } from "@/lib/auth/tokens";
-import { getProjectRole } from "@/lib/auth/permissions";
+import { getEffectiveRole } from "@/lib/auth/permissions";
 import type { RoleCode } from "@/lib/i18n/tr";
 
 interface AuthContextValue {
@@ -67,11 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getRole = useCallback(
-    (projectId: string) => {
-      if (!me) return null;
-      if (me.user.is_superuser) return "ADMIN" as RoleCode;
-      return getProjectRole(me.memberships, projectId);
-    },
+    (projectId: string) => getEffectiveRole(me?.memberships ?? [], projectId, me),
     [me]
   );
 

@@ -12,7 +12,7 @@ from apps.accounts.serializers import (
     UserProfileSerializer,
     UserSerializer,
 )
-from apps.core.permissions import IsProjectAdmin
+from apps.core.permissions import IsProjectAdminOrContractor
 from apps.core.viewsets import ProjectScopedMixin
 
 User = get_user_model()
@@ -101,7 +101,7 @@ class RoleListView(generics.ListAPIView):
 )
 class ProjectMembershipViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
     serializer_class = ProjectMembershipSerializer
-    permission_classes = [permissions.IsAuthenticated, IsProjectAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsProjectAdminOrContractor]
 
     def get_queryset(self):
         return ProjectMembership.objects.filter(

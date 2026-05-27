@@ -41,7 +41,11 @@ import { formatApiError } from "@/lib/api/errors";
 import { projectsApi } from "@/lib/api/resources";
 import type { Project } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/context";
-import { canAdminProject, canCreateProject } from "@/lib/auth/permissions";
+import {
+  canAdminProject,
+  canCreateProject,
+  canManageProjectsList,
+} from "@/lib/auth/permissions";
 import { statusLabels, tr } from "@/lib/i18n/tr";
 import type { RoleCode } from "@/lib/i18n/tr";
 
@@ -128,9 +132,7 @@ export default function ProjectsPage() {
     setOpen(true);
   };
 
-  const isAdminAny =
-    me?.user.is_superuser ||
-    me?.memberships.some((m) => m.is_active && m.role.code === "ADMIN");
+  const isAdminAny = canManageProjectsList(me);
 
   const projects = data?.results ?? [];
 

@@ -9,18 +9,39 @@ export function getProjectRole(
   return (m?.role.code as RoleCode) ?? null;
 }
 
+/**
+ * Family app: any logged-in user can edit any project (backend SHARED_PROJECT_ACCESS).
+ * Malik (OWNER) stays read-only when explicitly assigned.
+ */
+export function getEffectiveRole(
+  memberships: MembershipSummary[],
+  projectId: string,
+  me: MeResponse | null
+): RoleCode | null {
+  if (!me) return null;
+  if (me.user.is_superuser) return "ADMIN";
+  const stored = getProjectRole(memberships, projectId);
+  if (stored === "OWNER") return "OWNER";
+  return "CONTRACTOR";
+}
+
 export function isSuperuser(me: MeResponse | null) {
   return Boolean(me?.user.is_superuser);
 }
 
 export function canWriteProject(role: RoleCode | null, me?: MeResponse | null) {
   if (isSuperuser(me ?? null)) return true;
-  return role === "ADMIN" || role === "CONTRACTOR";
+  return role === "CONTRACTOR" || role === "ADMIN";
 }
 
 export function canAdminProject(role: RoleCode | null, me?: MeResponse | null) {
   if (isSuperuser(me ?? null)) return true;
-  return role === "ADMIN";
+  return role === "CONTRACTOR" || role === "ADMIN";
+}
+
+/** Any logged-in user can create a project (creator gets Müteahhit on that project). */
+export function canCreateProject(me: MeResponse | null) {
+  return Boolean(me);
 }
 
 export function isOwnerReadOnly(role: RoleCode | null, me?: MeResponse | null) {
@@ -28,10 +49,6 @@ export function isOwnerReadOnly(role: RoleCode | null, me?: MeResponse | null) {
   return role === "OWNER";
 }
 
-export function canCreateProject(me: MeResponse | null) {
-  if (!me) return false;
-  if (isSuperuser(me)) return true;
-  return me.memberships.some(
-    (m) => m.is_active && (m.role.code === "ADMIN" || m.role.code === "CONTRACTOR")
-  );
+export function canManageProjectsList(me: MeResponse | null) {
+  return Boolean(me);
 }

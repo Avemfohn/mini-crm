@@ -4,11 +4,11 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.accounts.models import ProjectMembership, RoleCode
 from apps.core.permissions import (
     get_project_membership,
     get_user_projects,
-    user_has_project_role,
+    user_can_manage_project,
+    user_can_write_project,
 )
 from apps.projects.models import Project
 
@@ -28,13 +28,7 @@ class SoftDeleteQueryMixin:
         if self.request.user.is_superuser:
             return True
         project = self.get_soft_delete_project()
-        if project is None:
-            return ProjectMembership.objects.filter(
-                user=self.request.user,
-                role__code=RoleCode.ADMIN,
-                is_active=True,
-            ).exists()
-        return user_has_project_role(self.request.user, project, RoleCode.ADMIN)
+        return user_can_manage_project(self.request.user, project)
 
     def check_include_deleted_permission(self):
         if self.include_deleted_requested() and not self.user_can_manage_deleted():
@@ -90,12 +84,7 @@ class ProjectScopedMixin:
     def user_can_write(self):
         if self.request.user.is_superuser:
             return True
-        return user_has_project_role(
-            self.request.user,
-            self.get_project(),
-            RoleCode.ADMIN,
-            RoleCode.CONTRACTOR,
-        )
+        return user_can_write_project(self.request.user, self.get_project())
 
 
 class AuditedModelViewSetMixin:

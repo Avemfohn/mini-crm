@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db.models import Q
 
 from apps.accounts.models import ProjectMembership, RoleCode
@@ -5,8 +6,14 @@ from apps.parties.models import Owner, UnitOwnership
 from apps.projects.models import Project, Unit
 
 
+def shared_project_access_enabled():
+    return getattr(settings, "SHARED_PROJECT_ACCESS", False)
+
+
 def get_user_projects(user):
-    if user.is_superuser:
+    if not user.is_authenticated:
+        return Project.objects.none()
+    if user.is_superuser or shared_project_access_enabled():
         return Project.objects.filter(is_deleted=False)
     project_ids = ProjectMembership.objects.filter(
         user=user,
@@ -35,12 +42,40 @@ def user_has_project_role(user, project, *role_codes):
 
 
 def user_is_project_member(user, project):
-    if user.is_superuser:
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or shared_project_access_enabled():
         return True
     return ProjectMembership.objects.filter(
         user=user,
         project=project,
         is_active=True,
+    ).exists()
+
+
+def user_can_write_project(user, project):
+    """Superuser, shared family access, or Müteahhit/Yönetici membership (not Malik)."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or shared_project_access_enabled():
+        return True
+    return user_has_project_role(
+        user, project, RoleCode.ADMIN, RoleCode.CONTRACTOR
+    )
+
+
+def user_can_manage_project(user, project=None):
+    """Soft-delete visibility/restore: superuser or project writer."""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser or shared_project_access_enabled():
+        return True
+    if project is not None:
+        return user_can_write_project(user, project)
+    return ProjectMembership.objects.filter(
+        user=user,
+        is_active=True,
+        role__code__in=[RoleCode.ADMIN, RoleCode.CONTRACTOR],
     ).exists()
 
 
@@ -117,9 +152,7 @@ class IsProjectAdminOrContractor:
         if request.user.is_superuser:
             return True
         project = view.get_project()
-        return user_has_project_role(
-            request.user, project, RoleCode.ADMIN, RoleCode.CONTRACTOR
-        )
+        return user_can_write_project(request.user, project)
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)
@@ -134,7 +167,7 @@ class IsProjectAdmin:
         if request.user.is_superuser:
             return True
         project = view.get_project()
-        return user_has_project_role(request.user, project, RoleCode.ADMIN)
+        return user_can_write_project(request.user, project)
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)
@@ -153,9 +186,7 @@ class IsProjectMemberReadOnlyForOwner:
             return False
         if request.method in ("GET", "HEAD", "OPTIONS"):
             return True
-        return user_has_project_role(
-            request.user, project, RoleCode.ADMIN, RoleCode.CONTRACTOR
-        )
+        return user_can_write_project(request.user, project)
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)
@@ -164,6 +195,8 @@ class IsProjectMemberReadOnlyForOwner:
 def filter_queryset_for_owner_role(user, project, queryset, unit_field="unit", owner_field="owner"):
     """Restrict queryset to owner's units/records when user has OWNER role only."""
     if user.is_superuser:
+        return queryset
+    if shared_project_access_enabled() or user.is_superuser:
         return queryset
     membership = get_project_membership(user, project)
     if not membership:

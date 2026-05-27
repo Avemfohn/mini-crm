@@ -11,12 +11,13 @@ from apps.accounts.models import ProjectMembership, Role, RoleCode
 from apps.core.permissions import (
     get_owner_scoped_units,
     get_user_projects,
-    user_has_project_role,
+    user_can_write_project,
 )
 from apps.core.viewsets import ProjectModelViewSet, SoftDeleteQueryMixin
 from apps.parties.models import Owner, UnitOwnership
 from apps.projects.models import Block, Project, Unit
 from apps.projects.serializers import BlockSerializer, ProjectSerializer, UnitSerializer
+from apps.projects.services import sync_family_memberships
 from apps.projects.setup import setup_new_project
 
 
@@ -34,9 +35,7 @@ class IsProjectWriter(permissions.BasePermission):
             return True
         if request.method in permissions.SAFE_METHODS:
             return get_user_projects(request.user).filter(id=obj.id).exists()
-        return user_has_project_role(
-            request.user, obj, RoleCode.ADMIN, RoleCode.CONTRACTOR
-        )
+        return user_can_write_project(request.user, obj)
 
 
 @extend_schema_view(
@@ -64,13 +63,15 @@ class ProjectViewSet(SoftDeleteQueryMixin, viewsets.ModelViewSet):
         if self.include_deleted_requested() and self.user_can_manage_deleted():
             if self.request.user.is_superuser:
                 return Project.objects.all().order_by("name")
-            admin_project_ids = ProjectMembership.objects.filter(
+            member_project_ids = ProjectMembership.objects.filter(
                 user=self.request.user,
-                role__code=RoleCode.ADMIN,
                 is_active=True,
+                role__code__in=[RoleCode.ADMIN, RoleCode.CONTRACTOR],
             ).values_list("project_id", flat=True)
-            deleted_admin = Project.objects.filter(id__in=admin_project_ids, is_deleted=True)
-            return (active | deleted_admin).distinct().order_by("name")
+            deleted_member = Project.objects.filter(
+                id__in=member_project_ids, is_deleted=True
+            )
+            return (active | deleted_member).distinct().order_by("name")
         return active
 
     def get_object(self):
@@ -78,12 +79,12 @@ class ProjectViewSet(SoftDeleteQueryMixin, viewsets.ModelViewSet):
             if self.request.user.is_superuser:
                 queryset = Project.objects.all()
             else:
-                admin_project_ids = ProjectMembership.objects.filter(
+                member_project_ids = ProjectMembership.objects.filter(
                     user=self.request.user,
-                    role__code=RoleCode.ADMIN,
                     is_active=True,
+                    role__code__in=[RoleCode.ADMIN, RoleCode.CONTRACTOR],
                 ).values_list("project_id", flat=True)
-                queryset = Project.objects.filter(id__in=admin_project_ids)
+                queryset = Project.objects.filter(id__in=member_project_ids)
         else:
             queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
@@ -100,14 +101,15 @@ class ProjectViewSet(SoftDeleteQueryMixin, viewsets.ModelViewSet):
             created_by=self.request.user,
             updated_by=self.request.user,
         )
-        admin_role = Role.objects.get(code=RoleCode.ADMIN)
+        contractor_role = Role.objects.get(code=RoleCode.CONTRACTOR)
         ProjectMembership.objects.create(
             user=self.request.user,
             project=project,
-            role=admin_role,
+            role=contractor_role,
             is_active=True,
         )
         setup_new_project(project, self.request.user)
+        sync_family_memberships(project)
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
