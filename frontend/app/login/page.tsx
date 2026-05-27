@@ -13,8 +13,8 @@ import { tr } from "@/lib/i18n/tr";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState("demo_admin");
-  const [password, setPassword] = useState("demo1234");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,9 +36,10 @@ export default function LoginPage() {
     <div className="lux-login-bg flex min-h-screen items-center justify-center p-4">
       <Card className="lux-card w-full max-w-md border-primary/20 shadow-xl">
         <CardHeader className="space-y-3 text-center">
-          <BrandLogo variant="login" linked={false} />
+          <div className="flex justify-center">
+            <BrandLogo variant="login" linked={false} />
+          </div>
           <CardTitle className="font-heading text-2xl">{tr.loginTitle}</CardTitle>
-          <p className="text-sm text-muted-foreground">{tr.loginHint}</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
