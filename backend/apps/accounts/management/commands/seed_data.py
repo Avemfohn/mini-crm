@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.accounts.models import ProjectMembership, Role, RoleCode, UserProfile
@@ -46,6 +46,7 @@ class Command(BaseCommand):
         self._seed_roles()
 
         if options.get("demo"):
+            self._require_demo_password()
             self._seed_demo()
             return
 
@@ -55,7 +56,7 @@ class Command(BaseCommand):
                 seed_menderes_project,
             )
 
-            password = settings.DEMO_USER_PASSWORD
+            password = self._require_demo_password()
             seed_menderes_project(password=password, stdout=self.stdout)
             self.stdout.write(self.style.SUCCESS("Menderes project seeded successfully."))
             self.stdout.write(f"Project code: {MENDERES_PROJECT_CODE}")
@@ -89,9 +90,21 @@ class Command(BaseCommand):
     def _seed_categories(self, project):
         seed_default_categories(project)
 
+    def _require_demo_password(self) -> str:
+        password = settings.DEMO_USER_PASSWORD
+        if not password:
+            raise CommandError(
+                "Set DEMO_USER_PASSWORD before running demo or Menderes seed commands."
+            )
+        if password == "demo1234":
+            raise CommandError(
+                "DEMO_USER_PASSWORD must not be demo1234 in production."
+            )
+        return password
+
     @transaction.atomic
     def _seed_demo(self):
-        password = settings.DEMO_USER_PASSWORD
+        password = self._require_demo_password()
         roles = {role.code: role for role in Role.objects.all()}
 
         demo_users = {}

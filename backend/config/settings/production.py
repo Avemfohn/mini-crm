@@ -1,13 +1,16 @@
 from django.core.exceptions import ImproperlyConfigured
 
-from config.env import env_bool
+from config.env import env_bool, env_str
 
-from .base import DEMO_USER_PASSWORD, DEV_SECRET_KEY, SECRET_KEY  # noqa: F401
+from .base import DEV_SECRET_KEY, SECRET_KEY  # noqa: F401
 from .base import *  # noqa: F403
 
 DEBUG = False
 
 INSTALLED_APPS += ["django.contrib.postgres"]  # noqa: F405
+
+# Optional: only used by `seed_data --demo` / `seed_menderes`. Not required for normal use.
+DEMO_USER_PASSWORD = env_str("DEMO_USER_PASSWORD")
 
 if not SECRET_KEY or SECRET_KEY == DEV_SECRET_KEY:
     raise ImproperlyConfigured(
@@ -16,7 +19,8 @@ if not SECRET_KEY or SECRET_KEY == DEV_SECRET_KEY:
 
 if DEMO_USER_PASSWORD == "demo1234":
     raise ImproperlyConfigured(
-        "DEMO_USER_PASSWORD must not use the default value in production."
+        "DEMO_USER_PASSWORD must not use the default value demo1234 in production. "
+        "Leave it unset if you do not run demo seed commands."
     )
 
 if env_bool("DJANGO_SECURE_COOKIES", default=False):
