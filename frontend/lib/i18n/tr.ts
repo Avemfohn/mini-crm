@@ -59,6 +59,8 @@ export const tr = {
   buildingView: "Bina",
   listView: "Liste",
   emptyUnit: "Boş",
+  positionTaken: "Bu kanat bu katta dolu",
+  floorFull: "Bu katta sol ve sağ kanat dolu",
   noBuildingUnits: "Bu blok için bina görünümünde gösterilecek daire yok.",
   configureBuildingHint:
     "Daire düzenlerken kat numarası ve binadaki konumu (sol/sağ) doldurun.",

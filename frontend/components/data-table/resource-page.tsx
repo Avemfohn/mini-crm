@@ -1,7 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
+  type ForwardedRef,
+} from "react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -45,6 +51,10 @@ export type FieldConfig = {
   label: string;
   type?: "text" | "number" | "textarea" | "select" | "checkbox" | "date";
   options?: { value: string; label: string }[];
+  getOptions?: (
+    form: Record<string, unknown>,
+    ctx: { editingId?: string },
+  ) => { value: string; label: string }[];
   required?: boolean;
   hideOnEdit?: boolean;
   /** Default for checkbox fields; defaults to true when omitted. */
@@ -61,9 +71,15 @@ export type ColumnConfig<T> = {
   render?: (row: T) => React.ReactNode;
 };
 
+export type ResourcePageHandle = {
+  openCreate: () => void;
+};
+
 type ResourcePageProps<T extends { id: string } & Partial<SoftDeleteFields>> = {
   title: string;
   hideTitle?: boolean;
+  hideCreateButton?: boolean;
+  hideTable?: boolean;
   queryKey: string[];
   canWrite: boolean;
   canAdmin: boolean;
@@ -76,24 +92,34 @@ type ResourcePageProps<T extends { id: string } & Partial<SoftDeleteFields>> = {
   deleteItem?: (id: string) => Promise<void>;
   restoreItem?: (id: string) => Promise<T>;
   getInitialValues?: (row: T) => Record<string, unknown>;
+  validateForm?: (
+    form: Record<string, unknown>,
+    ctx: { editingId?: string },
+  ) => string | null;
 };
 
-export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields>>({
-  title,
-  hideTitle = false,
-  queryKey,
-  canWrite,
-  canAdmin,
-  softDelete = true,
-  columns,
-  fields,
-  fetchList,
-  createItem,
-  updateItem,
-  deleteItem,
-  restoreItem,
-  getInitialValues,
-}: ResourcePageProps<T>) {
+function ResourcePageInner<T extends { id: string } & Partial<SoftDeleteFields>>(
+  {
+    title,
+    hideTitle = false,
+    hideCreateButton = false,
+    hideTable = false,
+    queryKey,
+    canWrite,
+    canAdmin,
+    softDelete = true,
+    columns,
+    fields,
+    fetchList,
+    createItem,
+    updateItem,
+    deleteItem,
+    restoreItem,
+    getInitialValues,
+    validateForm,
+  }: ResourcePageProps<T>,
+  ref: ForwardedRef<ResourcePageHandle>,
+) {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [includeDeleted, setIncludeDeleted] = useState(false);
@@ -112,8 +138,27 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
 
   const invalidate = () => qc.invalidateQueries({ queryKey });
 
+  const formContext = { editingId: editing?.id };
+
+  const resolveFieldOptions = (field: FieldConfig) =>
+    field.getOptions?.(form, formContext) ?? field.options ?? [];
+
+  useEffect(() => {
+    if (!open) return;
+    const pos = form.position_on_floor;
+    if (pos === "" || pos === undefined || pos === null) return;
+    const field = fields.find((f) => f.name === "position_on_floor");
+    if (!field?.getOptions) return;
+    const allowed = field.getOptions(form, formContext);
+    if (!allowed.some((o) => o.value === String(pos))) {
+      setForm((f) => ({ ...f, position_on_floor: "" }));
+    }
+  }, [form.floor, form.is_roof_level, form.block, open, editing?.id, fields]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const message = validateForm?.(form, formContext);
+      if (message) throw new Error(message);
       if (editing && updateItem) return updateItem(editing.id, form);
       if (createItem) return createItem(form);
       throw new Error("No create handler");
@@ -156,6 +201,8 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
     setOpen(true);
   };
 
+  useImperativeHandle(ref, () => ({ openCreate }), [fields]);
+
   const openEdit = (row: T) => {
     setEditing(row);
     setForm(getInitialValues ? getInitialValues(row) : { ...row });
@@ -184,7 +231,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
               <Label htmlFor="include-deleted">{tr.showDeleted}</Label>
             </div>
           )}
-          {canWrite && createItem && (
+          {canWrite && createItem && !hideCreateButton && (
             <Button className="w-full sm:w-auto" onClick={openCreate}>
               {tr.create}
             </Button>
@@ -192,6 +239,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
         </div>
       </div>
 
+      {!hideTable && (
       <TableScroll>
         <Table>
           <TableHeader>
@@ -271,8 +319,9 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
           </TableBody>
         </Table>
       </TableScroll>
+      )}
 
-      {data && data.count > 50 && (
+      {!hideTable && data && data.count > 50 && (
         <div className="mt-4 flex gap-2">
           <Button
             variant="outline"
@@ -319,7 +368,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
                     }
                   >
                     <option value="">Seçin</option>
-                    {field.options?.map((o) => (
+                    {resolveFieldOptions(field).map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
                       </option>
@@ -390,3 +439,9 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
     </div>
   );
 }
+
+export const ResourcePage = forwardRef(ResourcePageInner) as <
+  T extends { id: string } & Partial<SoftDeleteFields>,
+>(
+  props: ResourcePageProps<T> & { ref?: ForwardedRef<ResourcePageHandle> },
+) => ReturnType<typeof ResourcePageInner<T>>;

@@ -22,6 +22,38 @@ export function defaultFloorLabel(
   return `${f}. kat`;
 }
 
+export function unitMatchesBuildingLevel(
+  unit: Unit,
+  blockId: string,
+  floor: number | null,
+  isRoof: boolean,
+): boolean {
+  if (unit.is_deleted || unit.block !== blockId) return false;
+  if (isRoof) return unit.is_roof_level;
+  if (unit.is_roof_level) return false;
+  return (unit.floor ?? 0) === (floor ?? 0);
+}
+
+/** Positions (1=left, 2=right) already taken on this block + floor / roof level. */
+export function getOccupiedPositions(
+  units: Unit[],
+  blockId: string | null | undefined,
+  floor: number | null,
+  isRoof: boolean,
+  excludeUnitId?: string,
+): Set<1 | 2> {
+  if (!blockId) return new Set();
+  const occupied = new Set<1 | 2>();
+  for (const unit of units) {
+    if (excludeUnitId && unit.id === excludeUnitId) continue;
+    if (!unitMatchesBuildingLevel(unit, blockId, floor, isRoof)) continue;
+    if (unit.position_on_floor === 1 || unit.position_on_floor === 2) {
+      occupied.add(unit.position_on_floor);
+    }
+  }
+  return occupied;
+}
+
 export function resolveUnitFloor(data: {
   floor?: unknown;
   is_roof_level?: boolean;

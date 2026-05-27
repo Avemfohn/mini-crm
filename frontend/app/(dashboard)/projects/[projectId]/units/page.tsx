@@ -3,16 +3,21 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { Unit } from "@/lib/api/types";
-import { ResourcePage } from "@/components/data-table/resource-page";
+import {
+  ResourcePage,
+  type ResourcePageHandle,
+} from "@/components/data-table/resource-page";
 import { BuildingUnitsView } from "@/components/units/building-units-view";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { blocksApi, unitsApi } from "@/lib/api/resources";
 import { useAuth } from "@/lib/auth/context";
 import { canAdminProject, canWriteProject } from "@/lib/auth/permissions";
 import {
   defaultFloorLabel,
+  getOccupiedPositions,
   resolveUnitFloor,
 } from "@/lib/units/building-layout";
 import { statusLabels, tr } from "@/lib/i18n/tr";
@@ -22,6 +27,9 @@ export default function UnitsPage() {
   const { getRole } = useAuth();
   const role = getRole(projectId);
   const api = unitsApi(projectId);
+  const resourceRef = useRef<ResourcePageHandle>(null);
+  const [tab, setTab] = useState("building");
+  const canWrite = canWriteProject(role);
 
   const { data: blocks } = useQuery({
     queryKey: ["blocks", projectId, "all"],
@@ -37,9 +45,8 @@ export default function UnitsPage() {
   }, [blocks]);
 
   const { data: allUnits, isLoading: unitsLoading } = useQuery({
-    queryKey: ["units", projectId, "building", primaryBlock?.id],
+    queryKey: ["units", projectId],
     queryFn: () => api.list({ page: 1, page_size: 200 }),
-    enabled: !!primaryBlock,
   });
 
   const buildingUnits = useMemo(() => {
@@ -49,6 +56,50 @@ export default function UnitsPage() {
     );
   }, [allUnits, primaryBlock]);
 
+  const unitList = allUnits?.results ?? [];
+
+  const positionOptionsFor = useMemo(
+    () =>
+      (form: Record<string, unknown>, ctx: { editingId?: string }) => {
+        const is_roof_level = Boolean(form.is_roof_level);
+        const floor = resolveUnitFloor({
+          floor: form.floor,
+          is_roof_level,
+        });
+        const blockId = String(primaryBlock?.id ?? form.block ?? "");
+        const base = [{ value: "", label: "—" }];
+
+        if (!blockId) {
+          return [
+            ...base,
+            { value: "1", label: tr.leftSlot },
+            { value: "2", label: tr.rightSlot },
+          ];
+        }
+
+        if (floor === null && !is_roof_level) {
+          return [
+            ...base,
+            { value: "1", label: tr.leftSlot },
+            { value: "2", label: tr.rightSlot },
+          ];
+        }
+
+        const occupied = getOccupiedPositions(
+          unitList,
+          blockId,
+          floor,
+          is_roof_level,
+          ctx.editingId,
+        );
+
+        if (!occupied.has(1)) base.push({ value: "1", label: tr.leftSlot });
+        if (!occupied.has(2)) base.push({ value: "2", label: tr.rightSlot });
+        return base;
+      },
+    [unitList, primaryBlock],
+  );
+
   const fields = useMemo(() => {
     const base = [
       { name: "unit_number", label: tr.unitNumber, required: true },
@@ -57,7 +108,7 @@ export default function UnitsPage() {
         label: `${tr.roofLevel} — ${tr.roofLevelHint}`,
         type: "checkbox" as const,
         checkboxDefault: false,
-        clearFieldsWhenChecked: ["floor"],
+        clearFieldsWhenChecked: ["floor", "position_on_floor"],
       },
       {
         name: "floor",
@@ -69,11 +120,7 @@ export default function UnitsPage() {
         name: "position_on_floor",
         label: tr.positionOnFloor,
         type: "select" as const,
-        options: [
-          { value: "", label: "—" },
-          { value: "1", label: tr.leftSlot },
-          { value: "2", label: tr.rightSlot },
-        ],
+        getOptions: positionOptionsFor,
       },
       {
         name: "status",
@@ -102,7 +149,40 @@ export default function UnitsPage() {
       ];
     }
     return base;
-  }, [blocks, primaryBlock]);
+  }, [blocks, primaryBlock, positionOptionsFor]);
+
+  const validateForm = (
+    form: Record<string, unknown>,
+    ctx: { editingId?: string },
+  ) => {
+    const is_roof_level = Boolean(form.is_roof_level);
+    const floor = resolveUnitFloor({ floor: form.floor, is_roof_level });
+    const blockId = String(primaryBlock?.id ?? form.block ?? "");
+    if (!blockId) return null;
+    if (floor === null && !is_roof_level) return null;
+
+    const occupied = getOccupiedPositions(
+      unitList,
+      blockId,
+      floor,
+      is_roof_level,
+      ctx.editingId,
+    );
+
+    const posRaw = form.position_on_floor;
+    const pos =
+      posRaw === "" || posRaw === undefined || posRaw === null
+        ? null
+        : Number(posRaw);
+
+    if (pos === 1 || pos === 2) {
+      if (occupied.has(pos)) return tr.positionTaken;
+      return null;
+    }
+
+    if (occupied.size >= 2) return tr.floorFull;
+    return null;
+  };
 
   const normalizePayload = (data: Record<string, unknown>) => {
     const position = data.position_on_floor;
@@ -120,13 +200,20 @@ export default function UnitsPage() {
     };
   };
 
+  const openCreate = () => resourceRef.current?.openCreate();
+
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">{tr.units}</h2>
+        {canWrite && (
+          <Button className="w-full sm:w-auto" onClick={openCreate}>
+            {tr.create}
+          </Button>
+        )}
       </div>
 
-      <Tabs defaultValue="building" className="gap-4">
+      <Tabs value={tab} onValueChange={setTab} className="gap-4">
         <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="building" className="flex-1 sm:flex-none">
             {tr.buildingView}
@@ -141,64 +228,69 @@ export default function UnitsPage() {
             projectId={projectId}
             units={buildingUnits}
             blockName={primaryBlock?.name}
-            isLoading={unitsLoading || !primaryBlock}
+            isLoading={unitsLoading}
           />
           {!primaryBlock && !unitsLoading && (
             <p className="mt-2 text-sm text-muted-foreground">{tr.empty}</p>
           )}
         </TabsContent>
 
-        <TabsContent value="list">
-          <ResourcePage<Unit>
-            title={tr.units}
-            hideTitle
-            queryKey={["units", projectId]}
-            canWrite={canWriteProject(role)}
-            canAdmin={canAdminProject(role)}
-            columns={[
-              {
-                key: "unit_number",
-                label: tr.unitNumber,
-                render: (row) => (
-                  <Link
-                    href={`/projects/${projectId}/units/${row.id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {row.unit_number}
-                  </Link>
-                ),
-              },
-              {
-                key: "floor",
-                label: tr.floor,
-                render: (row) => defaultFloorLabel(row),
-              },
-              {
-                key: "status",
-                label: tr.status,
-                render: (row) => statusLabels[row.status] ?? row.status,
-              },
-            ]}
-            fields={fields}
-            fetchList={(params) => api.list(params)}
-            createItem={(data) => api.create(normalizePayload(data))}
-            updateItem={(id, data) => api.update(id, normalizePayload(data))}
-            deleteItem={(id) => api.remove(id)}
-            restoreItem={(id) => api.restore!(id)}
-            getInitialValues={(row) => ({
-              unit_number: row.unit_number,
-              floor: row.is_roof_level ? "" : row.floor,
-              position_on_floor:
-                row.position_on_floor != null ? String(row.position_on_floor) : "",
-              is_roof_level: row.is_roof_level,
-              block: row.block ?? "",
-              status: row.status,
-              gross_area_m2: row.gross_area_m2,
-              notes: row.notes,
-            })}
-          />
-        </TabsContent>
+        <TabsContent value="list" />
       </Tabs>
+
+      <div className={tab === "list" ? undefined : "hidden"}>
+        <ResourcePage<Unit>
+          ref={resourceRef}
+          title={tr.units}
+          hideTitle
+          hideCreateButton
+          queryKey={["units", projectId]}
+          canWrite={canWrite}
+          canAdmin={canAdminProject(role)}
+          columns={[
+            {
+              key: "unit_number",
+              label: tr.unitNumber,
+              render: (row) => (
+                <Link
+                  href={`/projects/${projectId}/units/${row.id}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {row.unit_number}
+                </Link>
+              ),
+            },
+            {
+              key: "floor",
+              label: tr.floor,
+              render: (row) => defaultFloorLabel(row),
+            },
+            {
+              key: "status",
+              label: tr.status,
+              render: (row) => statusLabels[row.status] ?? row.status,
+            },
+          ]}
+          fields={fields}
+          validateForm={validateForm}
+          fetchList={(params) => api.list(params)}
+          createItem={(data) => api.create(normalizePayload(data))}
+          updateItem={(id, data) => api.update(id, normalizePayload(data))}
+          deleteItem={(id) => api.remove(id)}
+          restoreItem={(id) => api.restore!(id)}
+          getInitialValues={(row) => ({
+            unit_number: row.unit_number,
+            floor: row.is_roof_level ? "" : row.floor,
+            position_on_floor:
+              row.position_on_floor != null ? String(row.position_on_floor) : "",
+            is_roof_level: row.is_roof_level,
+            block: row.block ?? "",
+            status: row.status,
+            gross_area_m2: row.gross_area_m2,
+            notes: row.notes,
+          })}
+        />
+      </div>
     </div>
   );
 }
