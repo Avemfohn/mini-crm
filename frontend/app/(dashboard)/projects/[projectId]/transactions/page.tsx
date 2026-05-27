@@ -267,22 +267,31 @@ export default function TransactionsPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={7}>{tr.loading}</TableCell>
+                <TableCell colSpan={7} className="mobile-table-message">
+                  {tr.loading}
+                </TableCell>
               </TableRow>
             )}
             {visibleRows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>{formatDateDisplay(row.transaction_date)}</TableCell>
-                <TableCell>
+                <TableCell label={tr.transactionDate}>
+                  {formatDateDisplay(row.transaction_date)}
+                </TableCell>
+                <TableCell label={tr.owner}>
                   {row.owner ? ownerMap.get(row.owner) ?? "—" : "—"}
                 </TableCell>
-                <TableCell>
+                <TableCell label={tr.unit}>
                   {row.unit ? unitMap.get(row.unit) ?? "—" : "—"}
                 </TableCell>
-                <TableCell>{formatMoney(row.amount, currency)}</TableCell>
-                <TableCell>{statusBadge(row)}</TableCell>
-                <TableCell>{row.description}</TableCell>
-                <TableCell className="flex flex-wrap gap-1">
+                <TableCell label={tr.amount}>
+                  {formatMoney(row.amount, currency)}
+                </TableCell>
+                <TableCell label={tr.status}>{statusBadge(row)}</TableCell>
+                <TableCell label={tr.description}>{row.description}</TableCell>
+                <TableCell
+                  label={tr.actions}
+                  className="mobile-table-actions flex flex-wrap gap-1"
+                >
                   {canWrite && row.status === "DRAFT" && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => openEdit(row)}>

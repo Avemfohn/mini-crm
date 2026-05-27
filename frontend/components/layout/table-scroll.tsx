@@ -8,10 +8,13 @@ export function TableScroll({
   className?: string;
 }) {
   return (
-    <div className={cn("lux-table -mx-1 rounded-xl border shadow-sm sm:mx-0", className)}>
-      <div className="overflow-x-auto overscroll-x-contain">
-        <div className="min-w-[36rem]">{children}</div>
-      </div>
+    <div
+      className={cn(
+        "mobile-card-table lux-table rounded-xl border border-border/70 bg-card shadow-sm",
+        className
+      )}
+    >
+      {children}
     </div>
   );
 }

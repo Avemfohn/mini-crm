@@ -191,12 +191,22 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1}>{tr.loading}</TableCell>
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="mobile-table-message"
+                >
+                  {tr.loading}
+                </TableCell>
               </TableRow>
             )}
             {!isLoading && rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={columns.length + 1}>{tr.empty}</TableCell>
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="mobile-table-message"
+                >
+                  {tr.empty}
+                </TableCell>
               </TableRow>
             )}
             {rows.map((row) => (
@@ -205,13 +215,16 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
                 className={row.is_deleted ? "opacity-50" : undefined}
               >
                 {columns.map((c) => (
-                  <TableCell key={c.key}>
+                  <TableCell key={c.key} label={c.label}>
                     {c.render
                       ? c.render(row)
                       : String((row as Record<string, unknown>)[c.key] ?? "")}
                   </TableCell>
                 ))}
-                <TableCell className="flex flex-wrap gap-1">
+                <TableCell
+                  label={tr.actions}
+                  className="mobile-table-actions flex flex-wrap gap-1"
+                >
                   {row.is_deleted && canAdmin && restoreItem && (
                     <Button
                       size="sm"

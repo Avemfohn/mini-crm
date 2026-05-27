@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
+import { TableScroll } from "@/components/layout/table-scroll";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -156,7 +157,7 @@ export default function OwnerDetailPage() {
                   {formatMoney(plan.total_amount, currency)} / {plan.installment_count}{" "}
                   {tr.installments.toLowerCase()}
                 </p>
-                <div className="lux-table overflow-hidden rounded-lg border">
+                <TableScroll>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -169,15 +170,21 @@ export default function OwnerDetailPage() {
                     <TableBody>
                       {plan.schedule.map((row) => (
                         <TableRow key={row.installment}>
-                          <TableCell>{row.installment}</TableCell>
-                          <TableCell>{formatMoney(row.expected, currency)}</TableCell>
-                          <TableCell>{formatMoney(row.paid, currency)}</TableCell>
-                          <TableCell>{formatMoney(row.remaining, currency)}</TableCell>
+                          <TableCell label="#">{row.installment}</TableCell>
+                          <TableCell label={tr.expected}>
+                            {formatMoney(row.expected, currency)}
+                          </TableCell>
+                          <TableCell label={tr.paid}>
+                            {formatMoney(row.paid, currency)}
+                          </TableCell>
+                          <TableCell label={tr.remaining}>
+                            {formatMoney(row.remaining, currency)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </TableScroll>
               </div>
             ))}
           </CardContent>
@@ -189,7 +196,7 @@ export default function OwnerDetailPage() {
           <CardTitle>{tr.transactions}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="lux-table overflow-hidden rounded-lg border">
+          <TableScroll>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -202,15 +209,21 @@ export default function OwnerDetailPage() {
               <TableBody>
                 {transactions?.results.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell>{formatDateDisplay(t.transaction_date)}</TableCell>
-                    <TableCell>{formatMoney(t.amount, currency)}</TableCell>
-                    <TableCell>{statusLabels[t.status] ?? t.status}</TableCell>
-                    <TableCell>{t.description}</TableCell>
+                    <TableCell label={tr.transactionDate}>
+                      {formatDateDisplay(t.transaction_date)}
+                    </TableCell>
+                    <TableCell label={tr.amount}>
+                      {formatMoney(t.amount, currency)}
+                    </TableCell>
+                    <TableCell label={tr.status}>
+                      {statusLabels[t.status] ?? t.status}
+                    </TableCell>
+                    <TableCell label={tr.notes}>{t.description}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </TableScroll>
         </CardContent>
       </Card>
     </div>

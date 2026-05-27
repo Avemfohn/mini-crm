@@ -144,6 +144,70 @@
   .lux-table thead tr {
     @apply border-b bg-muted/40;
   }
+
+  /* Mobile: stack table rows as cards (no horizontal swipe) */
+  @media (max-width: 767px) {
+    .mobile-card-table [data-slot="table-container"] {
+      overflow-x: visible;
+    }
+    .mobile-card-table thead {
+      display: none;
+    }
+    .mobile-card-table tbody tr {
+      display: block;
+      margin-bottom: 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--card);
+      padding: 0.25rem 0.5rem 0.5rem;
+      box-shadow: 0 1px 2px oklch(0 0 0 / 0.04);
+    }
+    .mobile-card-table tbody tr:last-child {
+      margin-bottom: 0;
+    }
+    .mobile-card-table tbody td {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.35rem 0.5rem;
+      white-space: normal;
+      border: none;
+      text-align: right;
+    }
+    .mobile-card-table tbody td::before {
+      content: attr(data-label);
+      flex-shrink: 0;
+      max-width: 42%;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--muted-foreground);
+    }
+    .mobile-card-table tbody td:not([data-label])::before,
+    .mobile-card-table tbody td[data-label=""]::before {
+      display: none;
+    }
+    .mobile-card-table tbody td.mobile-table-message {
+      display: block;
+      padding: 1rem;
+      text-align: center;
+    }
+    .mobile-card-table tbody td.mobile-table-message::before {
+      display: none;
+    }
+    .mobile-card-table tbody td.mobile-table-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.35rem;
+    }
+    .mobile-card-table tbody td.mobile-table-actions::before {
+      margin-bottom: 0.125rem;
+    }
+    .mobile-card-table tbody td.mobile-table-actions > * {
+      justify-content: flex-end;
+    }
+  }
   .lux-login-bg {
     background:
       radial-gradient(ellipse 80% 50% at 50% -20%, oklch(0.72 0.11 75 / 0.15), transparent),

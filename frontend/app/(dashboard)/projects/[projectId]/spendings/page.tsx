@@ -197,24 +197,35 @@ export default function SpendingsPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={6}>{tr.loading}</TableCell>
+                <TableCell colSpan={6} className="mobile-table-message">
+                  {tr.loading}
+                </TableCell>
               </TableRow>
             )}
             {!isLoading && visibleRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-muted-foreground">
+                <TableCell colSpan={6} className="mobile-table-message text-muted-foreground">
                   {tr.empty}
                 </TableCell>
               </TableRow>
             )}
             {visibleRows.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>{formatDateDisplay(row.transaction_date)}</TableCell>
-                <TableCell>{categoryMap.get(row.category) ?? "—"}</TableCell>
-                <TableCell>{formatMoney(row.amount, currency)}</TableCell>
-                <TableCell>{statusBadge(row)}</TableCell>
-                <TableCell>{row.description}</TableCell>
-                <TableCell className="flex flex-wrap gap-1">
+                <TableCell label={tr.transactionDate}>
+                  {formatDateDisplay(row.transaction_date)}
+                </TableCell>
+                <TableCell label={tr.category}>
+                  {categoryMap.get(row.category) ?? "—"}
+                </TableCell>
+                <TableCell label={tr.amount}>
+                  {formatMoney(row.amount, currency)}
+                </TableCell>
+                <TableCell label={tr.status}>{statusBadge(row)}</TableCell>
+                <TableCell label={tr.notes}>{row.description}</TableCell>
+                <TableCell
+                  label={tr.actions}
+                  className="mobile-table-actions flex flex-wrap gap-1"
+                >
                   {canWrite && row.status === "DRAFT" && (
                     <Button size="sm" onClick={() => postMutation.mutate(row.id)}>
                       {tr.post}

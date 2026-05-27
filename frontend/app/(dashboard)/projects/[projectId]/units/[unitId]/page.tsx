@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MoneyInput } from "@/components/form/money-input";
 import { PageHeader } from "@/components/layout/page-header";
+import { TableScroll } from "@/components/layout/table-scroll";
 import { RecordPaymentForm } from "@/components/payments/record-payment-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -479,7 +480,7 @@ export default function UnitDetailPage() {
               )}
 
               {displaySchedule.length > 0 && (
-                <div className="lux-table mt-4 overflow-hidden rounded-lg border">
+                <TableScroll className="mt-4">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -493,16 +494,22 @@ export default function UnitDetailPage() {
                     <TableBody>
                       {displaySchedule.map((row) => (
                         <TableRow key={row.installment}>
-                          <TableCell>{row.installment}</TableCell>
-                          <TableCell>{row.due_date}</TableCell>
-                          <TableCell>{formatMoney(row.expected, currency)}</TableCell>
-                          <TableCell>{formatMoney(row.paid, currency)}</TableCell>
-                          <TableCell>{formatMoney(row.remaining, currency)}</TableCell>
+                          <TableCell label="#">{row.installment}</TableCell>
+                          <TableCell label={tr.startDate}>{row.due_date}</TableCell>
+                          <TableCell label={tr.expected}>
+                            {formatMoney(row.expected, currency)}
+                          </TableCell>
+                          <TableCell label={tr.paid}>
+                            {formatMoney(row.paid, currency)}
+                          </TableCell>
+                          <TableCell label={tr.remaining}>
+                            {formatMoney(row.remaining, currency)}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </div>
+                </TableScroll>
               )}
             </div>
           )}
@@ -557,7 +564,7 @@ export default function UnitDetailPage() {
           {canWrite && !currentOwner && (
             <p className="text-sm text-muted-foreground">{tr.assignOwnerToPay}</p>
           )}
-          <div className="lux-table overflow-hidden rounded-lg border">
+          <TableScroll>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -572,14 +579,19 @@ export default function UnitDetailPage() {
               <TableBody>
                 {transactionsLoading && (
                   <TableRow>
-                    <TableCell colSpan={canWrite ? 6 : 5}>{tr.loading}</TableCell>
+                    <TableCell
+                      colSpan={canWrite ? 6 : 5}
+                      className="mobile-table-message"
+                    >
+                      {tr.loading}
+                    </TableCell>
                   </TableRow>
                 )}
                 {transactionsError && (
                   <TableRow>
                     <TableCell
                       colSpan={canWrite ? 6 : 5}
-                      className="text-destructive"
+                      className="mobile-table-message text-destructive"
                     >
                       {formatApiError(transactionsQueryError)}
                     </TableCell>
@@ -589,17 +601,26 @@ export default function UnitDetailPage() {
                   !transactionsError &&
                   !visibleTransactions.length && (
                     <TableRow>
-                      <TableCell colSpan={canWrite ? 6 : 5}>{tr.empty}</TableCell>
+                      <TableCell
+                        colSpan={canWrite ? 6 : 5}
+                        className="mobile-table-message"
+                      >
+                        {tr.empty}
+                      </TableCell>
                     </TableRow>
                   )}
                 {visibleTransactions.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell>{formatDateDisplay(t.transaction_date)}</TableCell>
-                    <TableCell>
+                    <TableCell label={tr.transactionDate}>
+                      {formatDateDisplay(t.transaction_date)}
+                    </TableCell>
+                    <TableCell label={tr.owner}>
                       {owners?.results.find((o) => o.id === t.owner)?.full_name ?? "—"}
                     </TableCell>
-                    <TableCell>{formatMoney(t.amount, currency)}</TableCell>
-                    <TableCell>
+                    <TableCell label={tr.amount}>
+                      {formatMoney(t.amount, currency)}
+                    </TableCell>
+                    <TableCell label={tr.status}>
                       {t.entry_type === "REVERSAL" ? (
                         <Badge variant="secondary">{tr.reversalEntry}</Badge>
                       ) : t.status === "ACTIVE" ? (
@@ -610,9 +631,12 @@ export default function UnitDetailPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>{t.description || "—"}</TableCell>
+                    <TableCell label={tr.notes}>{t.description || "—"}</TableCell>
                     {canWrite && (
-                      <TableCell>
+                      <TableCell
+                        label={tr.actions}
+                        className="mobile-table-actions"
+                      >
                         {t.status === "ACTIVE" && (
                           <Button
                             size="sm"
@@ -628,7 +652,7 @@ export default function UnitDetailPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </TableScroll>
         </CardContent>
       </Card>
 

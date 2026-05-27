@@ -132,98 +132,169 @@ export default function ProjectsPage() {
     me?.user.is_superuser ||
     me?.memberships.some((m) => m.is_active && m.role.code === "ADMIN");
 
+  const projects = data?.results ?? [];
+
+  const renderStatus = (p: Project) =>
+    p.is_deleted ? (
+      <Badge variant="secondary" className="text-xs">
+        {tr.voided}
+      </Badge>
+    ) : (
+      <Badge variant="outline" className="text-xs font-normal">
+        {statusLabels[p.status] ?? p.status}
+      </Badge>
+    );
+
+  const renderAdminActions = (p: Project, canAdmin: boolean) => {
+    if (!canAdmin) return null;
+    if (p.is_deleted) {
+      return (
+        <Button
+          size="xs"
+          variant="outline"
+          className="h-7"
+          onClick={() => restoreMutation.mutate(p.id)}
+        >
+          {tr.restore}
+        </Button>
+      );
+    }
+    return (
+      <>
+        <Button size="xs" variant="outline" className="h-7" onClick={() => openEdit(p)}>
+          {tr.edit}
+        </Button>
+        <Button
+          size="xs"
+          variant="destructive"
+          className="h-7"
+          onClick={() => setDeleteId(p.id)}
+        >
+          {tr.delete}
+        </Button>
+      </>
+    );
+  };
+
   return (
-    <div>
+    <div className="mx-auto w-full max-w-5xl">
       <PageHeader
         title={tr.projects}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             {isAdminAny && (
-              <div className="flex items-center gap-2 text-sm">
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2 text-xs sm:text-sm">
+                <Label htmlFor="show-deleted-projects" className="leading-tight">
+                  {tr.showDeleted}
+                </Label>
                 <Switch
                   checked={includeDeleted}
                   onCheckedChange={setIncludeDeleted}
                   id="show-deleted-projects"
                 />
-                <Label htmlFor="show-deleted-projects">{tr.showDeleted}</Label>
               </div>
             )}
             {canCreateProject(me) && (
-              <Button className="w-full sm:w-auto" onClick={openCreate}>
+              <Button size="sm" className="h-9 shrink-0 sm:w-auto" onClick={openCreate}>
                 {tr.createProject}
               </Button>
             )}
           </div>
         }
       />
-      <TableScroll>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{tr.name}</TableHead>
-              <TableHead>{tr.code}</TableHead>
-              <TableHead>{tr.status}</TableHead>
-              <TableHead>{tr.actions}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
+
+      {/* Mobile: compact cards, full width */}
+      <div className="space-y-2 md:hidden">
+        {isLoading && (
+          <p className="py-6 text-center text-sm text-muted-foreground">{tr.loading}</p>
+        )}
+        {!isLoading && projects.length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">{tr.empty}</p>
+        )}
+        {projects.map((p) => {
+          const role = getRole(p.id);
+          const canAdmin = canAdminProject(role ?? null, me);
+          return (
+            <article
+              key={p.id}
+              className={`rounded-lg border border-border/70 bg-card p-3 shadow-sm ${
+                p.is_deleted ? "opacity-60" : ""
+              }`}
+            >
+              <Link href={`/projects/${p.id}`} className="block min-w-0">
+                <p className="line-clamp-2 text-sm font-medium leading-snug">{p.name}</p>
+                <p className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                  {p.code}
+                </p>
+              </Link>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                {renderStatus(p)}
+                {canAdmin && (
+                  <div className="flex shrink-0 gap-1">{renderAdminActions(p, canAdmin)}</div>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block">
+        <TableScroll>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4}>{tr.loading}</TableCell>
+                <TableHead>{tr.name}</TableHead>
+                <TableHead>{tr.code}</TableHead>
+                <TableHead>{tr.status}</TableHead>
+                <TableHead>{tr.actions}</TableHead>
               </TableRow>
-            )}
-            {data?.results.map((p) => {
-              const role = getRole(p.id);
-              const canAdmin = canAdminProject(role ?? null);
-              return (
-                <TableRow key={p.id} className={p.is_deleted ? "opacity-50" : undefined}>
-                  <TableCell>
-                    <Link
-                      href={`/projects/${p.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {p.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{p.code}</TableCell>
-                  <TableCell>
-                    {p.is_deleted ? (
-                      <Badge variant="secondary">{tr.voided}</Badge>
-                    ) : (
-                      statusLabels[p.status] ?? p.status
-                    )}
-                  </TableCell>
-                  <TableCell className="flex flex-wrap gap-1">
-                    {p.is_deleted && canAdmin && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => restoreMutation.mutate(p.id)}
-                      >
-                        {tr.restore}
-                      </Button>
-                    )}
-                    {!p.is_deleted && canAdmin && (
-                      <>
-                        <Button size="sm" variant="outline" onClick={() => openEdit(p)}>
-                          {tr.edit}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteId(p.id)}
-                        >
-                          {tr.delete}
-                        </Button>
-                      </>
-                    )}
+            </TableHeader>
+            <TableBody>
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={4} className="mobile-table-message">
+                    {tr.loading}
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </TableScroll>
+              )}
+              {!isLoading && projects.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="mobile-table-message">
+                    {tr.empty}
+                  </TableCell>
+                </TableRow>
+              )}
+              {projects.map((p) => {
+                const role = getRole(p.id);
+                const canAdmin = canAdminProject(role ?? null, me);
+                return (
+                  <TableRow key={p.id} className={p.is_deleted ? "opacity-50" : undefined}>
+                    <TableCell label={tr.name}>
+                      <Link
+                        href={`/projects/${p.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {p.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell label={tr.code} className="font-mono text-sm">
+                      {p.code}
+                    </TableCell>
+                    <TableCell label={tr.status}>{renderStatus(p)}</TableCell>
+                    <TableCell
+                      label={tr.actions}
+                      className="mobile-table-actions flex flex-wrap gap-1"
+                    >
+                      {renderAdminActions(p, canAdmin)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableScroll>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
