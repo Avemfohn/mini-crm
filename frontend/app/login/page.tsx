@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/layout/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,18 @@ import { useAuth } from "@/lib/auth/context";
 import { tr } from "@/lib/i18n/tr";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, me, loading: authLoading } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && me) {
+      router.replace("/projects");
+    }
+  }, [authLoading, me, router]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +37,14 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (authLoading || me) {
+    return (
+      <div className="lux-login-bg flex min-h-screen items-center justify-center p-4">
+        <p className="text-sm text-muted-foreground">{tr.loading}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="lux-login-bg flex min-h-screen items-center justify-center p-4">
