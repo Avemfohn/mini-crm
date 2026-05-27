@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { BrandLogo } from "@/components/layout/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,10 +35,8 @@ export default function LoginPage() {
   return (
     <div className="lux-login-bg flex min-h-screen items-center justify-center p-4">
       <Card className="lux-card w-full max-w-md border-primary/20 shadow-xl">
-        <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Building2 className="h-6 w-6 text-primary" />
-          </div>
+        <CardHeader className="space-y-3 text-center">
+          <BrandLogo variant="login" linked={false} />
           <CardTitle className="font-heading text-2xl">{tr.loginTitle}</CardTitle>
           <p className="text-sm text-muted-foreground">{tr.loginHint}</p>
         </CardHeader>

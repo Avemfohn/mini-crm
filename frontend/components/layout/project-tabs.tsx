@@ -10,6 +10,7 @@ const tabs = [
   { href: "/units", label: tr.units },
   { href: "/owners", label: tr.owners },
   { href: "/transactions", label: tr.transactions },
+  { href: "/spendings", label: tr.spendings },
 ];
 
 export function ProjectTabs({ projectId }: { projectId: string }) {
@@ -27,7 +28,11 @@ export function ProjectTabs({ projectId }: { projectId: string }) {
               ? pathname.includes("/units")
               : tab.href === "/owners"
                 ? pathname.includes("/owners")
-                : pathname.startsWith(href);
+                : tab.href === "/spendings"
+                  ? pathname.includes("/spendings")
+                  : tab.href === "/transactions"
+                    ? pathname.startsWith(`${base}/transactions`)
+                    : pathname.startsWith(href);
         return (
           <Link
             key={tab.href}

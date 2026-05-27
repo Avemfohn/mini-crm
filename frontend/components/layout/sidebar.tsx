@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LogOut, Settings } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
+import { BrandLogo } from "@/components/layout/brand-logo";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useAuth } from "@/lib/auth/context";
@@ -15,11 +16,8 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-4">
-        <Building2 className="h-6 w-6 text-sidebar-primary" />
-        <span className="font-heading text-lg font-semibold tracking-tight">
-          {tr.appName}
-        </span>
+      <div className="flex items-center justify-center border-b border-sidebar-border px-3 py-4">
+        <BrandLogo variant="sidebar" className="max-h-16 w-full" />
       </div>
       <nav className="flex-1 space-y-1 p-3">
         <Link

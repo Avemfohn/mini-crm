@@ -4,7 +4,14 @@ from decimal import Decimal
 
 from django.db.models import Sum
 
-from apps.ledger.models import PaymentPlan, Transaction, TransactionDirection, TransactionStatus
+from apps.ledger.models import (
+    DirectionHint,
+    PaymentPlan,
+    Transaction,
+    TransactionCategory,
+    TransactionDirection,
+    TransactionStatus,
+)
 
 
 def _add_months(start: date, months: int) -> date:
@@ -51,8 +58,24 @@ def build_payment_schedule(plan: PaymentPlan) -> list[dict]:
     return rows
 
 
-def get_default_category(project):
-    from apps.ledger.models import TransactionCategory
+def get_default_category(project, direction=None):
+    if direction == TransactionDirection.OUTFLOW:
+        category = TransactionCategory.objects.filter(
+            project=project,
+            slug="genel-gider",
+            is_deleted=False,
+        ).first()
+        if category:
+            return category
+        return (
+            TransactionCategory.objects.filter(
+                project=project,
+                is_deleted=False,
+                direction_hint=DirectionHint.OUTFLOW,
+            )
+            .order_by("sort_order")
+            .first()
+        )
 
     category = TransactionCategory.objects.filter(
         project=project,
@@ -62,7 +85,14 @@ def get_default_category(project):
     if category:
         return category
     return (
-        TransactionCategory.objects.filter(project=project, is_deleted=False)
+        TransactionCategory.objects.filter(
+            project=project,
+            is_deleted=False,
+            direction_hint=DirectionHint.INFLOW,
+        )
+        .order_by("sort_order")
+        .first()
+        or TransactionCategory.objects.filter(project=project, is_deleted=False)
         .order_by("sort_order")
         .first()
     )

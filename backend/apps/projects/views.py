@@ -4,7 +4,7 @@ from decimal import Decimal
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.response import Response
 
 from apps.accounts.models import ProjectMembership, Role, RoleCode
@@ -88,7 +88,10 @@ class ProjectViewSet(SoftDeleteQueryMixin, viewsets.ModelViewSet):
             queryset = self.filter_queryset(self.get_queryset())
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        obj = queryset.get(**filter_kwargs)
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Project.DoesNotExist as exc:
+            raise NotFound("Project not found.") from exc
         self.check_object_permissions(self.request, obj)
         return obj
 

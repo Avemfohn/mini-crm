@@ -36,12 +36,29 @@ class Command(BaseCommand):
             action="store_true",
             help="Seed a full demo project with users, units, owners, and transactions.",
         )
+        parser.add_argument(
+            "--menderes",
+            action="store_true",
+            help="Seed Menderes Mah. 325. Sokak real-life kentsel dönüşüm project.",
+        )
 
     def handle(self, *args, **options):
         self._seed_roles()
 
         if options.get("demo"):
             self._seed_demo()
+            return
+
+        if options.get("menderes"):
+            from apps.accounts.management.commands.seed_menderes_data import (
+                MENDERES_PROJECT_CODE,
+                seed_menderes_project,
+            )
+
+            password = settings.DEMO_USER_PASSWORD
+            seed_menderes_project(password=password, stdout=self.stdout)
+            self.stdout.write(self.style.SUCCESS("Menderes project seeded successfully."))
+            self.stdout.write(f"Project code: {MENDERES_PROJECT_CODE}")
             return
 
         project_code = options.get("project_code")
@@ -124,8 +141,8 @@ class Command(BaseCommand):
             cat.slug: cat
             for cat in TransactionCategory.objects.filter(project=project)
         }
-        contribution = categories[slugify("Contribution fee (katılım bedeli)")[:64]]
-        payment = categories[slugify("Payment")[:64]]
+        payment_category = categories["odeme"]
+        spending_category = categories["genel-gider"]
 
         blocks = {}
         for code, name, sort_order in [("a", "Blok A", 0), ("b", "Blok B", 1)]:
@@ -212,7 +229,7 @@ class Command(BaseCommand):
             defaults={
                 "unit": units["a-101"],
                 "owner": owners["demo-owner-profile"],
-                "category": contribution,
+                "category": payment_category,
                 "transaction_date": "2024-03-01",
                 "amount": Decimal("50000.00"),
                 "direction": TransactionDirection.INFLOW,
@@ -229,7 +246,7 @@ class Command(BaseCommand):
             defaults={
                 "unit": units["a-102"],
                 "owner": owners["ahmet-yilmaz"],
-                "category": contribution,
+                "category": payment_category,
                 "transaction_date": "2024-04-01",
                 "amount": Decimal("75000.00"),
                 "direction": TransactionDirection.INFLOW,
@@ -248,7 +265,7 @@ class Command(BaseCommand):
             defaults={
                 "unit": units["b-201"],
                 "owner": owners["ayse-kaya"],
-                "category": payment,
+                "category": spending_category,
                 "transaction_date": "2024-05-01",
                 "amount": Decimal("10000.00"),
                 "direction": TransactionDirection.OUTFLOW,

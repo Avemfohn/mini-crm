@@ -42,7 +42,7 @@ export function ThemeToggle() {
     <Button
       variant="outline"
       size="sm"
-      className="w-full justify-start gap-2"
+      className="w-full justify-start gap-2 border-sidebar-border bg-transparent text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       onClick={cycle}
       type="button"
       suppressHydrationWarning

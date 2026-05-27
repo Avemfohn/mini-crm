@@ -1,7 +1,14 @@
 from apps.ledger.models import DirectionHint, TransactionCategory
 from apps.projects.models import Block, Project
 
-DEFAULT_PAYMENT_CATEGORY = ("Ödeme", DirectionHint.INFLOW, "odeme")
+DEFAULT_CATEGORIES = [
+    ("Ödeme", DirectionHint.INFLOW, "odeme", 0),
+    ("Çimento", DirectionHint.OUTFLOW, "cimento", 10),
+    ("Demir", DirectionHint.OUTFLOW, "demir", 20),
+    ("İşçilik", DirectionHint.OUTFLOW, "iscilik", 30),
+    ("Nakliye", DirectionHint.OUTFLOW, "nakliye", 40),
+    ("Genel gider", DirectionHint.OUTFLOW, "genel-gider", 50),
+]
 
 
 def create_default_block(project: Project, user) -> Block:
@@ -16,17 +23,19 @@ def create_default_block(project: Project, user) -> Block:
 
 
 def seed_default_categories(project: Project) -> None:
-    name, direction_hint, slug = DEFAULT_PAYMENT_CATEGORY
-    TransactionCategory.objects.update_or_create(
-        project=project,
-        slug=slug,
-        defaults={
-            "name": name,
-            "direction_hint": direction_hint,
-            "sort_order": 0,
-            "is_active": True,
-        },
-    )
+    for name, direction_hint, slug, sort_order in DEFAULT_CATEGORIES:
+        TransactionCategory.objects.update_or_create(
+            project=project,
+            slug=slug,
+            defaults={
+                "name": name,
+                "direction_hint": direction_hint,
+                "sort_order": sort_order,
+                "is_active": True,
+                "is_deleted": False,
+                "deleted_at": None,
+            },
+        )
 
 
 def setup_new_project(project: Project, user) -> None:

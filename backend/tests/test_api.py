@@ -12,6 +12,7 @@ from apps.ledger.models import (
 )
 from apps.parties.models import Owner, UnitOwnership
 from apps.projects.models import Block, Project, Unit
+from apps.projects.setup import seed_default_categories
 
 User = get_user_model()
 
@@ -241,9 +242,12 @@ class TestProjects:
         assert response.status_code == 201
         project_id = response.data["id"]
         assert Block.objects.filter(project_id=project_id, name="Ana Blok", code="A").exists()
-        assert TransactionCategory.objects.filter(project_id=project_id).count() == 1
+        assert TransactionCategory.objects.filter(project_id=project_id).count() == 6
         assert TransactionCategory.objects.filter(
             project_id=project_id, slug="odeme"
+        ).exists()
+        assert TransactionCategory.objects.filter(
+            project_id=project_id, slug="cimento", direction_hint="OUTFLOW"
         ).exists()
 
     def test_soft_delete_unit(self, api_client, seeded_project, contractor_user, unit):
@@ -257,6 +261,75 @@ class TestProjects:
         list_response = api_client.get(f"/api/v1/projects/{seeded_project.id}/units/")
         assert list_response.status_code == 200
         assert len(list_response.data["results"]) == 0
+
+    def test_outflow_without_category_uses_outflow_default(
+        self, api_client, seeded_project, contractor_user
+    ):
+        seed_default_categories(seeded_project)
+        outflow_default = TransactionCategory.objects.get(
+            project=seeded_project, slug="genel-gider"
+        )
+        auth_client(api_client, contractor_user)
+        response = api_client.post(
+            f"/api/v1/projects/{seeded_project.id}/transactions/",
+            {
+                "transaction_date": "2024-06-01",
+                "amount": "50000.00",
+                "direction": TransactionDirection.OUTFLOW,
+                "description": "Çimento alımı",
+            },
+            format="json",
+        )
+        assert response.status_code == 201
+        assert response.data["category"] == str(outflow_default.id)
+
+    def test_transaction_list_direction_filter(
+        self, api_client, seeded_project, contractor_user, unit, category
+    ):
+        auth_client(api_client, contractor_user)
+        seed_default_categories(seeded_project)
+        spending = TransactionCategory.objects.get(
+            project=seeded_project, slug="cimento"
+        )
+        api_client.post(
+            f"/api/v1/projects/{seeded_project.id}/transactions/",
+            {
+                "unit": str(unit.id),
+                "category": str(category.id),
+                "transaction_date": "2024-06-01",
+                "amount": "1000.00",
+                "direction": TransactionDirection.INFLOW,
+            },
+            format="json",
+        )
+        api_client.post(
+            f"/api/v1/projects/{seeded_project.id}/transactions/",
+            {
+                "category": str(spending.id),
+                "transaction_date": "2024-06-02",
+                "amount": "2000.00",
+                "direction": TransactionDirection.OUTFLOW,
+                "description": "Demir",
+            },
+            format="json",
+        )
+        inflow_response = api_client.get(
+            f"/api/v1/projects/{seeded_project.id}/transactions/?direction=INFLOW"
+        )
+        outflow_response = api_client.get(
+            f"/api/v1/projects/{seeded_project.id}/transactions/?direction=OUTFLOW"
+        )
+        assert inflow_response.status_code == 200
+        assert outflow_response.status_code == 200
+        assert all(
+            row["direction"] == TransactionDirection.INFLOW
+            for row in inflow_response.data["results"]
+        )
+        assert all(
+            row["direction"] == TransactionDirection.OUTFLOW
+            for row in outflow_response.data["results"]
+        )
+        assert len(outflow_response.data["results"]) >= 1
 
 
 @pytest.mark.django_db
@@ -555,7 +628,7 @@ class TestDemoSeed:
         assert Block.objects.filter(project=project, is_deleted=False).count() == 2
         assert Unit.objects.filter(project=project, is_deleted=False).count() == 6
         assert Owner.objects.filter(is_deleted=False).count() >= 3
-        assert TransactionCategory.objects.filter(project=project, is_deleted=False).count() == 5
+        assert TransactionCategory.objects.filter(project=project, is_deleted=False).count() == 6
         assert Transaction.objects.filter(project=project).count() >= 3
 
     def test_demo_seed_is_idempotent(self):

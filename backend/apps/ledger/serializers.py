@@ -36,6 +36,22 @@ class TransactionCategorySerializer(serializers.ModelSerializer):
         validated_data["project"] = self.context["project"]
         return super().create(validated_data)
 
+    def validate(self, attrs):
+        project = self.context["project"]
+        slug = attrs.get("slug", getattr(self.instance, "slug", None))
+        if not slug:
+            return attrs
+        qs = TransactionCategory.objects.filter(
+            project=project,
+            slug=slug,
+            is_deleted=False,
+        )
+        if self.instance:
+            qs = qs.exclude(id=self.instance.id)
+        if qs.exists():
+            raise serializers.ValidationError({"slug": "Bu slug zaten kullanılıyor."})
+        return attrs
+
 
 class PaymentPlanSerializer(serializers.ModelSerializer):
     owner = OwnerSerializer(read_only=True)
@@ -91,8 +107,21 @@ class PaymentPlanSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         project = self.context.get("project")
         unit = attrs.get("unit", getattr(self.instance, "unit", None))
+        owner = attrs.get("owner", getattr(self.instance, "owner", None))
         if unit and project and unit.project_id != project.id:
             raise serializers.ValidationError({"unit": "Unit must belong to this project."})
+        if owner and unit and project:
+            qs = PaymentPlan.objects.filter(
+                project=project,
+                unit=unit,
+                owner=owner,
+            )
+            if self.instance:
+                qs = qs.exclude(id=self.instance.id)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"non_field_errors": ["Bu daire ve malik için zaten ödeme planı mevcut."]}
+                )
         return attrs
 
     def create(self, validated_data):
@@ -192,10 +221,11 @@ class TransactionSerializer(serializers.ModelSerializer):
         project = self.context["project"]
         validated_data["project"] = project
         if not validated_data.get("category"):
-            category = get_default_category(project)
+            direction = validated_data.get("direction")
+            category = get_default_category(project, direction=direction)
             if not category:
                 raise serializers.ValidationError(
-                    {"category": "No default payment category for this project."}
+                    {"category": "No default category for this project and direction."}
                 )
             validated_data["category"] = category
         return super().create(validated_data)

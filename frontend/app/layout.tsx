@@ -14,7 +14,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "mini-erp",
+  title: "Ercan İnşaat - Ayhan Ercan",
   description: "Kentsel dönüşüm finans takibi",
 };
 

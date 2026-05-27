@@ -10,7 +10,13 @@ from apps.core.permissions import (
     filter_queryset_for_owner_role,
 )
 from apps.core.viewsets import ProjectModelViewSet, ProjectScopedMixin
-from apps.ledger.models import PaymentPlan, Transaction, TransactionCategory, TransactionStatus
+from apps.ledger.models import (
+    PaymentPlan,
+    Transaction,
+    TransactionCategory,
+    TransactionDirection,
+    TransactionStatus,
+)
 from apps.ledger.serializers import (
     PaymentPlanSerializer,
     TransactionCategorySerializer,
@@ -78,6 +84,12 @@ class TransactionViewSet(ProjectScopedMixin, viewsets.ModelViewSet):
         date_to = self.request.query_params.get("date_to")
         if date_to:
             qs = qs.filter(transaction_date__lte=date_to)
+        direction_param = self.request.query_params.get("direction")
+        if direction_param:
+            allowed = {d.value for d in TransactionDirection}
+            if direction_param not in allowed:
+                raise ValidationError({"direction": "Must be INFLOW or OUTFLOW."})
+            qs = qs.filter(direction=direction_param)
 
         return filter_queryset_for_owner_role(
             self.request.user,

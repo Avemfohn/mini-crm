@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,14 +63,17 @@ export default function TransactionsPage() {
   const [hideReversals, setHideReversals] = useState(true);
   const [form, setForm] = useState<Record<string, string>>({});
 
-  const params: Record<string, string> = {};
-  if (status) params.status = status;
-  if (dateFrom) params.date_from = dateFrom;
-  if (dateTo) params.date_to = dateTo;
+  const listParams = useMemo(() => {
+    const p: Record<string, string> = { direction: "INFLOW" };
+    if (status) p.status = status;
+    if (dateFrom) p.date_from = dateFrom;
+    if (dateTo) p.date_to = dateTo;
+    return p;
+  }, [status, dateFrom, dateTo]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["transactions", projectId, params],
-    queryFn: () => api.list(params),
+    queryKey: ["ledger-inflow", projectId, status, dateFrom, dateTo],
+    queryFn: () => api.list(listParams),
   });
 
   const { data: units } = useQuery({
@@ -196,8 +199,11 @@ export default function TransactionsPage() {
   };
 
   const visibleRows =
-    data?.results.filter((row) => !hideReversals || row.entry_type === "STANDARD") ??
-    [];
+    data?.results.filter(
+      (row) =>
+        row.direction === "INFLOW" &&
+        (!hideReversals || row.entry_type === "STANDARD")
+    ) ?? [];
 
   return (
     <div>
@@ -248,7 +254,6 @@ export default function TransactionsPage() {
               <TableHead>{tr.owner}</TableHead>
               <TableHead>{tr.unit}</TableHead>
               <TableHead>{tr.amount}</TableHead>
-              <TableHead>{tr.direction}</TableHead>
               <TableHead>{tr.status}</TableHead>
               <TableHead>{tr.description}</TableHead>
               <TableHead>{tr.actions}</TableHead>
@@ -257,7 +262,7 @@ export default function TransactionsPage() {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={8}>{tr.loading}</TableCell>
+                <TableCell colSpan={7}>{tr.loading}</TableCell>
               </TableRow>
             )}
             {visibleRows.map((row) => (
@@ -270,7 +275,6 @@ export default function TransactionsPage() {
                   {row.unit ? unitMap.get(row.unit) ?? "—" : "—"}
                 </TableCell>
                 <TableCell>{formatMoney(row.amount, currency)}</TableCell>
-                <TableCell>{statusLabels[row.direction] ?? row.direction}</TableCell>
                 <TableCell>{statusBadge(row)}</TableCell>
                 <TableCell>{row.description}</TableCell>
                 <TableCell className="space-x-2">

@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatApiError } from "@/lib/api/errors";
 import {
   blocksApi,
+  categoriesApi,
   ownersApi,
   paymentPlansApi,
   projectsApi,
@@ -22,6 +23,7 @@ import {
 } from "@/lib/api/resources";
 import { useAuth } from "@/lib/auth/context";
 import { canWriteProject } from "@/lib/auth/permissions";
+import { formatDateDisplay } from "@/lib/format/date";
 import { statusLabels, tr } from "@/lib/i18n/tr";
 
 function formatMoney(amount: number, currency: string) {
@@ -67,6 +69,11 @@ export default function ProjectOverviewPage() {
   const { data: paymentPlans } = useQuery({
     queryKey: ["payment-plans", projectId, "summary"],
     queryFn: () => paymentPlansApi(projectId).list(),
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ["categories", projectId, "summary"],
+    queryFn: () => categoriesApi(projectId).list(),
   });
 
   const block = blocks?.results[0];
@@ -132,6 +139,27 @@ export default function ProjectOverviewPage() {
       });
     });
 
+    const categoryMap = new Map(
+      categories?.results.map((c) => [c.id, c.name]) ?? []
+    );
+    const recentSpendings = (transactions?.results ?? [])
+      .filter(
+        (t) =>
+          t.entry_type === "STANDARD" &&
+          t.status === "ACTIVE" &&
+          t.direction === "OUTFLOW" &&
+          !t.unit &&
+          !t.owner
+      )
+      .slice(0, 5)
+      .map((t) => ({
+        id: t.id,
+        date: t.transaction_date,
+        category: categoryMap.get(t.category) ?? "—",
+        amount: Number(t.amount),
+        description: t.description,
+      }));
+
     return {
       currency,
       inflow,
@@ -140,8 +168,9 @@ export default function ProjectOverviewPage() {
       ownerCount: owners?.count ?? owners?.results.length ?? 0,
       pendingInstallments,
       byOwner: Array.from(byOwner.values()).sort((a, b) => b.total - a.total),
+      recentSpendings,
     };
-  }, [transactions, owners, units, project, paymentPlans]);
+  }, [transactions, owners, units, project, paymentPlans, categories]);
 
   const saveProjectMutation = useMutation({
     mutationFn: () => projectsApi.update(projectId, projectForm),
@@ -188,6 +217,11 @@ export default function ProjectOverviewPage() {
             <Link href={`/projects/${projectId}/transactions`}>
               <Button type="button">{tr.quickAddPayment}</Button>
             </Link>
+            <Link href={`/projects/${projectId}/spendings`}>
+              <Button variant="outline" type="button">
+                {tr.recordSpending}
+              </Button>
+            </Link>
           </div>
         }
       />
@@ -215,6 +249,12 @@ export default function ProjectOverviewPage() {
             <p className="text-2xl font-semibold">
               {formatMoney(summary.outflow, summary.currency)}
             </p>
+            <Link
+              href={`/projects/${projectId}/spendings`}
+              className="mt-2 inline-block text-sm text-primary hover:underline"
+            >
+              {tr.viewSpendings}
+            </Link>
           </CardContent>
         </Card>
         <Card className="lux-card">
@@ -248,6 +288,33 @@ export default function ProjectOverviewPage() {
           </CardContent>
         </Card>
       </div>
+
+      {summary.recentSpendings.length > 0 && (
+        <Card className="lux-card mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{tr.recentSpendings}</CardTitle>
+            <Link
+              href={`/projects/${projectId}/spendings`}
+              className="text-sm text-primary hover:underline"
+            >
+              {tr.viewSpendings}
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {summary.recentSpendings.map((s) => (
+              <div key={s.id} className="flex flex-wrap justify-between gap-2 text-sm">
+                <span>
+                  {formatDateDisplay(s.date)} · {s.category}
+                  {s.description ? ` — ${s.description}` : ""}
+                </span>
+                <span className="font-medium">
+                  {formatMoney(s.amount, summary.currency)}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {summary.byOwner.length > 0 && (
         <Card className="lux-card mb-6">
