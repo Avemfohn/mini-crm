@@ -9,11 +9,16 @@ import type {
   PaymentPlan,
   Project,
   ProjectMembership,
+  Role,
   Transaction,
   TransactionCategory,
   Unit,
   UnitOwnership,
 } from "@/lib/api/types";
+
+export const rolesApi = {
+  list: () => apiRequest<Role[]>("/roles/"),
+};
 
 export const projectsApi = {
   list: (params?: Record<string, string | boolean | number | undefined>) =>

@@ -76,9 +76,9 @@ class Command(BaseCommand):
 
     def _seed_roles(self):
         roles = [
-            (RoleCode.ADMIN, "Administrator", "Full system access"),
-            (RoleCode.CONTRACTOR, "Contractor", "Manage projects and ledger"),
-            (RoleCode.OWNER, "Owner", "Read-only portal access"),
+            (RoleCode.ADMIN, "Yönetici", "Tam yetki"),
+            (RoleCode.CONTRACTOR, "Müteahhit", "Günlük işlemler ve kayıtlar"),
+            (RoleCode.OWNER, "Malik", "Salt okunur erişim"),
         ]
         for code, name, description in roles:
             Role.objects.update_or_create(

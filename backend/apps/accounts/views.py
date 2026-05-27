@@ -3,11 +3,12 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import generics, permissions, viewsets
 from rest_framework.response import Response
 
-from apps.accounts.models import ProjectMembership, UserProfile
+from apps.accounts.models import ProjectMembership, Role, UserProfile
 from apps.accounts.serializers import (
     MeSerializer,
     MeUpdateSerializer,
     ProjectMembershipSerializer,
+    RoleSerializer,
     UserProfileSerializer,
     UserSerializer,
 )
@@ -78,6 +79,16 @@ class MeView(generics.RetrieveUpdateAPIView):
             request.user.save()
 
         return Response(self._build_me_response(request))
+
+
+@extend_schema(tags=["accounts"])
+class RoleListView(generics.ListAPIView):
+    """All assignable project roles (ADMIN, CONTRACTOR, OWNER)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RoleSerializer
+    queryset = Role.objects.all().order_by("code")
+    pagination_class = None
 
 
 @extend_schema_view(

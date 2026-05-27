@@ -1,10 +1,11 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import type { ProjectMembership } from "@/lib/api/types";
 import { ResourcePage } from "@/components/data-table/resource-page";
-import { membershipsApi } from "@/lib/api/resources";
+import { membershipsApi, rolesApi } from "@/lib/api/resources";
 import { useAuth } from "@/lib/auth/context";
 import { canAdminProject } from "@/lib/auth/permissions";
 import { roleLabels, tr } from "@/lib/i18n/tr";
@@ -13,9 +14,14 @@ import type { RoleCode } from "@/lib/i18n/tr";
 export default function MembershipsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const router = useRouter();
-  const { getRole, me } = useAuth();
+  const { getRole } = useAuth();
   const role = getRole(projectId);
   const api = membershipsApi(projectId);
+
+  const { data: roles } = useQuery({
+    queryKey: ["roles"],
+    queryFn: () => rolesApi.list(),
+  });
 
   useEffect(() => {
     if (role && !canAdminProject(role)) {
@@ -24,20 +30,12 @@ export default function MembershipsPage() {
   }, [role, projectId, router]);
 
   const roleOptions = useMemo(() => {
-    const seen = new Map<number, RoleCode>();
-    me?.memberships.forEach((m) => {
-      seen.set(m.role.id, m.role.code as RoleCode);
-    });
-    if (seen.size === 0) {
-      (["ADMIN", "CONTRACTOR", "OWNER"] as RoleCode[]).forEach((code, i) => {
-        seen.set(i + 1, code);
-      });
-    }
-    return Array.from(seen.entries()).map(([id, code]) => ({
-      value: String(id),
-      label: roleLabels[code],
+    if (!roles?.length) return [];
+    return roles.map((r) => ({
+      value: String(r.id),
+      label: roleLabels[r.code as RoleCode] ?? r.name,
     }));
-  }, [me]);
+  }, [roles]);
 
   if (!canAdminProject(role)) {
     return <p>{tr.accessDenied}</p>;

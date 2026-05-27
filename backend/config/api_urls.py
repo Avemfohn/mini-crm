@@ -2,7 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.accounts.views import MeView, ProjectMembershipViewSet
+from apps.accounts.views import MeView, ProjectMembershipViewSet, RoleListView
 from apps.ledger.views import PaymentPlanViewSet, TransactionCategoryViewSet, TransactionViewSet
 from apps.parties.views import OwnerViewSet, UnitOwnershipViewSet
 from apps.projects.views import BlockViewSet, ProjectViewSet, UnitViewSet
@@ -95,6 +95,7 @@ urlpatterns = [
     path("auth/token/", TokenObtainPairView.as_view(), name="token-obtain"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("auth/me/", MeView.as_view(), name="auth-me"),
+    path("roles/", RoleListView.as_view(), name="role-list"),
     path("", include(router.urls)),
     *nested_urlpatterns,
     *project_restore,
