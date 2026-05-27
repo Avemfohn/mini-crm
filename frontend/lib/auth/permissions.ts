@@ -21,7 +21,8 @@ export function getEffectiveRole(
   if (!me) return null;
   if (me.user.is_superuser) return "ADMIN";
   const stored = getProjectRole(memberships, projectId);
-  if (stored === "OWNER") return "OWNER";
+  if (stored) return stored;
+  // Shared family access: edit rights without a membership row yet.
   return "CONTRACTOR";
 }
 

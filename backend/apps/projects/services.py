@@ -18,16 +18,21 @@ def sync_family_memberships(project) -> int:
     """
     if not getattr(settings, "SHARED_PROJECT_ACCESS", False):
         return 0
-    role = Role.objects.get(code=RoleCode.CONTRACTOR)
+    contractor = Role.objects.get(code=RoleCode.CONTRACTOR)
     count = 0
     for user in User.objects.filter(is_active=True):
-        _, created = ProjectMembership.objects.update_or_create(
+        membership, created = ProjectMembership.objects.get_or_create(
             user=user,
             project=project,
-            defaults={"role": role, "is_active": True},
+            defaults={"role": contractor, "is_active": True},
         )
         if created:
             count += 1
+            continue
+        # Never downgrade Yönetici (or other roles); only ensure access is active.
+        if not membership.is_active:
+            membership.is_active = True
+            membership.save(update_fields=["is_active"])
     return count
 
 
