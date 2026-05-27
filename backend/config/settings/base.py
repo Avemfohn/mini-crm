@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from config.env import env_bool, env_int, env_list, env_str
+from config.env import database_config, env_bool, env_int, env_list, env_str
 
 load_dotenv()
 
@@ -66,16 +66,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": env_str("POSTGRES_DB", "minierp"),
-        "USER": env_str("POSTGRES_USER", "minierp"),
-        "PASSWORD": env_str("POSTGRES_PASSWORD", "minierp"),
-        "HOST": env_str("POSTGRES_HOST", "localhost"),
-        "PORT": env_str("POSTGRES_PORT", "5432"),
-    }
-}
+DATABASES = {"default": database_config()}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
