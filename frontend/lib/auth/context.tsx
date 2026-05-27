@@ -69,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const getRole = useCallback(
     (projectId: string) => {
       if (!me) return null;
+      if (me.user.is_superuser) return "ADMIN" as RoleCode;
       return getProjectRole(me.memberships, projectId);
     },
     [me]

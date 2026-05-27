@@ -127,9 +127,9 @@ export default function ProjectsPage() {
     setOpen(true);
   };
 
-  const isAdminAny = me?.memberships.some(
-    (m) => m.is_active && m.role.code === "ADMIN"
-  );
+  const isAdminAny =
+    me?.user.is_superuser ||
+    me?.memberships.some((m) => m.is_active && m.role.code === "ADMIN");
 
   return (
     <div>
