@@ -1,20 +1,21 @@
-import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from config.env import env_bool, env_int, env_list, env_str
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-dev-only-change-in-production",
-)
+DEV_SECRET_KEY = "django-insecure-dev-only-change-in-production"
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "false").lower() == "true"
+SECRET_KEY = env_str("DJANGO_SECRET_KEY", DEV_SECRET_KEY)
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -23,7 +24,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "corsheaders",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "drf_spectacular",
     "apps.core",
     "apps.projects",
     "apps.parties",
@@ -33,6 +37,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,11 +68,11 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("POSTGRES_DB", "minierp"),
-        "USER": os.environ.get("POSTGRES_USER", "minierp"),
-        "PASSWORD": os.environ.get("POSTGRES_PASSWORD", "minierp"),
-        "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-        "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+        "NAME": env_str("POSTGRES_DB", "minierp"),
+        "USER": env_str("POSTGRES_USER", "minierp"),
+        "PASSWORD": env_str("POSTGRES_PASSWORD", "minierp"),
+        "HOST": env_str("POSTGRES_HOST", "localhost"),
+        "PORT": env_str("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -88,13 +93,32 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 50,
+    "PAGE_SIZE": env_int("API_PAGE_SIZE", 50),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=env_int("JWT_ACCESS_MINUTES", 15)),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=env_int("JWT_REFRESH_DAYS", 7)),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": False,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "mini-erp API",
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
+
+DEMO_USER_PASSWORD = env_str("DEMO_USER_PASSWORD", "demo1234")

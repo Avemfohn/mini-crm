@@ -19,16 +19,14 @@ def void_transaction(
     *,
     voided_by,
     void_reason: str = "",
-    create_reversal: bool = True,
+    create_reversal: bool = False,
 ) -> Transaction:
     if txn.status != TransactionStatus.ACTIVE:
         raise ValueError("Only active transactions can be voided.")
 
-    txn.status = TransactionStatus.VOIDED
-    txn.voided_at = timezone.now()
-    txn.voided_by = voided_by
-    txn.void_reason = void_reason
-    txn.save()
+    # Reversal rows offset an already-voided payment; do not chain another reversal.
+    if txn.entry_type == EntryType.REVERSAL:
+        create_reversal = False
 
     if create_reversal:
         reversal_direction = (
@@ -51,5 +49,11 @@ def void_transaction(
             reverses=txn,
             created_by=voided_by,
         )
+
+    txn.status = TransactionStatus.VOIDED
+    txn.voided_at = timezone.now()
+    txn.voided_by = voided_by
+    txn.void_reason = void_reason
+    txn.save()
 
     return txn

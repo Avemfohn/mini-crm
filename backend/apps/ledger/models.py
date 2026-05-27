@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -190,7 +192,7 @@ class Transaction(UUIDModel, TimeStampedModel, AuditedModel):
             raise ValidationError({"unit": "Unit must belong to the same project."})
         if self.category_id and self.project_id and self.category.project_id != self.project_id:
             raise ValidationError({"category": "Category must belong to the same project."})
-        if self.entry_type == EntryType.REVERSAL:
+        if self.entry_type == EntryType.REVERSAL and self.status != TransactionStatus.VOIDED:
             if not self.reverses_id:
                 raise ValidationError({"reverses": "Reversal entries must reference the original transaction."})
             elif self.reverses.status != TransactionStatus.ACTIVE:
@@ -199,7 +201,7 @@ class Transaction(UUIDModel, TimeStampedModel, AuditedModel):
             raise ValidationError({"voided_at": "Voided transactions must have voided_at set."})
 
     def _enforce_immutability(self):
-        if not self.pk:
+        if self._state.adding:
             return
         old = Transaction.objects.get(pk=self.pk)
         if old.status != TransactionStatus.ACTIVE:
@@ -220,3 +222,54 @@ class Transaction(UUIDModel, TimeStampedModel, AuditedModel):
 
     def delete_queryset(self):
         raise ValidationError("Transactions cannot be deleted.")
+
+
+class PaymentPlan(UUIDModel, TimeStampedModel, AuditedModel):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.PROTECT,
+        related_name="payment_plans",
+    )
+    unit = models.ForeignKey(
+        Unit,
+        on_delete=models.PROTECT,
+        related_name="payment_plans",
+    )
+    owner = models.ForeignKey(
+        Owner,
+        on_delete=models.PROTECT,
+        related_name="payment_plans",
+    )
+    total_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        validators=[validate_positive_amount],
+    )
+    installment_count = models.PositiveIntegerField(default=1)
+    start_date = models.DateField()
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "unit", "owner"],
+                name="uniq_payment_plan_per_unit_owner",
+            ),
+            models.CheckConstraint(
+                check=Q(installment_count__gte=1),
+                name="payment_plan_installment_count_positive",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.owner} / {self.unit} — {self.total_amount}"
+
+    def clean(self):
+        super().clean()
+        if self.unit_id and self.project_id and self.unit.project_id != self.project_id:
+            raise ValidationError({"unit": "Unit must belong to this project."})
+
+    @property
+    def monthly_amount(self) -> Decimal:
+        return (self.total_amount / self.installment_count).quantize(Decimal("0.01"))
