@@ -9,6 +9,7 @@ export const tr = {
   loginTitle: "Kentsel dönüşüm finans takibi",
   loginHint: "Demo: demo_admin / demo1234",
   loginError: "Giriş başarısız. Bilgilerinizi kontrol edin.",
+  menu: "Menü",
   projects: "Projeler",
   createProject: "Proje oluştur",
   projectName: "Proje adı",

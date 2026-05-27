@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { TableScroll } from "@/components/layout/table-scroll";
 import {
   RecordSpendingForm,
   useOutflowCategories,
@@ -134,11 +135,11 @@ export default function SpendingsPage() {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3">
         <h2 className="text-lg font-semibold">{tr.spendings}</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
           <select
-            className="form-select w-auto px-2"
+            className="form-select w-full px-2 sm:w-auto"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
@@ -149,14 +150,14 @@ export default function SpendingsPage() {
           </select>
           <Input
             type="date"
-            className="h-9 w-auto"
+            className="h-9 w-full sm:w-auto"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             title={tr.dateFrom}
           />
           <Input
             type="date"
-            className="h-9 w-auto"
+            className="h-9 w-full sm:w-auto"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             title={tr.dateTo}
@@ -170,14 +171,18 @@ export default function SpendingsPage() {
             {tr.onlyStandardSpendings}
           </label>
           {canWrite && (
-            <Button onClick={() => setOpen(true)} disabled={!outflowCategories?.length}>
+            <Button
+              className="w-full sm:w-auto lg:ml-auto"
+              onClick={() => setOpen(true)}
+              disabled={!outflowCategories?.length}
+            >
               {tr.recordSpending}
             </Button>
           )}
         </div>
       </div>
 
-      <div className="lux-table rounded-xl border shadow-sm">
+      <TableScroll>
         <Table>
           <TableHeader>
             <TableRow>
@@ -209,7 +214,7 @@ export default function SpendingsPage() {
                 <TableCell>{formatMoney(row.amount, currency)}</TableCell>
                 <TableCell>{statusBadge(row)}</TableCell>
                 <TableCell>{row.description}</TableCell>
-                <TableCell className="space-x-2">
+                <TableCell className="flex flex-wrap gap-1">
                   {canWrite && row.status === "DRAFT" && (
                     <Button size="sm" onClick={() => postMutation.mutate(row.id)}>
                       {tr.post}
@@ -229,7 +234,7 @@ export default function SpendingsPage() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </TableScroll>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

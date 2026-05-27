@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { MobileHeader } from "@/components/layout/mobile-header";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useAuth } from "@/lib/auth/context";
 import { tr } from "@/lib/i18n/tr";
@@ -29,9 +30,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar />
-      <main className="flex-1 overflow-auto bg-background p-6 md:p-8">{children}</main>
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+        <MobileHeader />
+        <main className="min-w-0 flex-1 overflow-x-hidden bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:p-5 md:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

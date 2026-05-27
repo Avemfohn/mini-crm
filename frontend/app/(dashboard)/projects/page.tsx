@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { TableScroll } from "@/components/layout/table-scroll";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -148,12 +149,14 @@ export default function ProjectsPage() {
               </div>
             )}
             {canCreateProject(me) && (
-              <Button onClick={openCreate}>{tr.createProject}</Button>
+              <Button className="w-full sm:w-auto" onClick={openCreate}>
+                {tr.createProject}
+              </Button>
             )}
           </div>
         }
       />
-      <div className="lux-table rounded-xl border shadow-sm">
+      <TableScroll>
         <Table>
           <TableHeader>
             <TableRow>
@@ -190,7 +193,7 @@ export default function ProjectsPage() {
                       statusLabels[p.status] ?? p.status
                     )}
                   </TableCell>
-                  <TableCell className="space-x-2">
+                  <TableCell className="flex flex-wrap gap-1">
                     {p.is_deleted && canAdmin && (
                       <Button
                         size="sm"
@@ -220,7 +223,7 @@ export default function ProjectsPage() {
             })}
           </TableBody>
         </Table>
-      </div>
+      </TableScroll>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">

@@ -34,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { TableScroll } from "@/components/layout/table-scroll";
 import { formatApiError } from "@/lib/api/errors";
 import type { Paginated, SoftDeleteFields } from "@/lib/api/types";
 import { tr } from "@/lib/i18n/tr";
@@ -156,9 +157,9 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold">{title}</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {softDelete && canAdmin && (
             <div className="flex items-center gap-2 text-sm">
               <Switch
@@ -170,12 +171,14 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
             </div>
           )}
           {canWrite && createItem && (
-            <Button onClick={openCreate}>{tr.create}</Button>
+            <Button className="w-full sm:w-auto" onClick={openCreate}>
+              {tr.create}
+            </Button>
           )}
         </div>
       </div>
 
-      <div className="lux-table rounded-xl border shadow-sm">
+      <TableScroll>
         <Table>
           <TableHeader>
             <TableRow>
@@ -208,7 +211,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
                       : String((row as Record<string, unknown>)[c.key] ?? "")}
                   </TableCell>
                 ))}
-                <TableCell className="space-x-2">
+                <TableCell className="flex flex-wrap gap-1">
                   {row.is_deleted && canAdmin && restoreItem && (
                     <Button
                       size="sm"
@@ -240,7 +243,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
             ))}
           </TableBody>
         </Table>
-      </div>
+      </TableScroll>
 
       {data && data.count > 50 && (
         <div className="mt-4 flex gap-2">

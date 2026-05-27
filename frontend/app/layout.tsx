@@ -18,6 +18,12 @@ export const metadata: Metadata = {
   description: "Kentsel dönüşüm finans takibi",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

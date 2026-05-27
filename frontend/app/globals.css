@@ -151,7 +151,7 @@
       var(--background);
   }
   .form-select {
-    @apply h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground;
+    @apply h-10 rounded-md border border-input bg-background px-3 text-base text-foreground sm:h-9 sm:text-sm;
     color-scheme: light;
   }
   .dark .form-select {

@@ -203,22 +203,24 @@ export default function ProjectOverviewPage() {
         title={project.name}
         description={project.code}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/projects/${projectId}/units`}>
-              <Button variant="outline" type="button">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Link href={`/projects/${projectId}/units`} className="block">
+              <Button variant="outline" type="button" className="w-full">
                 {tr.quickAddUnit}
               </Button>
             </Link>
-            <Link href={`/projects/${projectId}/owners`}>
-              <Button variant="outline" type="button">
+            <Link href={`/projects/${projectId}/owners`} className="block">
+              <Button variant="outline" type="button" className="w-full">
                 {tr.quickAddOwner}
               </Button>
             </Link>
-            <Link href={`/projects/${projectId}/transactions`}>
-              <Button type="button">{tr.quickAddPayment}</Button>
+            <Link href={`/projects/${projectId}/transactions`} className="block">
+              <Button type="button" className="w-full">
+                {tr.quickAddPayment}
+              </Button>
             </Link>
-            <Link href={`/projects/${projectId}/spendings`}>
-              <Button variant="outline" type="button">
+            <Link href={`/projects/${projectId}/spendings`} className="block">
+              <Button variant="outline" type="button" className="w-full">
                 {tr.recordSpending}
               </Button>
             </Link>
