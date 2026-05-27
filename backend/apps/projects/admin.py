@@ -12,7 +12,16 @@ class BlockInline(admin.TabularInline):
 class UnitInline(admin.TabularInline):
     model = Unit
     extra = 0
-    fields = ("block", "unit_number", "floor", "status", "is_deleted")
+    fields = (
+        "block",
+        "unit_number",
+        "floor",
+        "floor_label",
+        "position_on_floor",
+        "is_roof_level",
+        "status",
+        "is_deleted",
+    )
 
 
 @admin.register(Project)
@@ -33,7 +42,17 @@ class BlockAdmin(admin.ModelAdmin):
 
 @admin.register(Unit)
 class UnitAdmin(admin.ModelAdmin):
-    list_display = ("unit_number", "project", "block", "floor", "status", "is_deleted")
+    list_display = (
+        "unit_number",
+        "project",
+        "block",
+        "floor",
+        "floor_label",
+        "position_on_floor",
+        "is_roof_level",
+        "status",
+        "is_deleted",
+    )
     list_filter = ("project", "status", "is_deleted")
     search_fields = ("unit_number", "project__name", "block__name")
     autocomplete_fields = ("project", "block")

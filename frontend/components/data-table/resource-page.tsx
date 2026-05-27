@@ -38,6 +38,7 @@ import { TableScroll } from "@/components/layout/table-scroll";
 import { formatApiError } from "@/lib/api/errors";
 import type { Paginated, SoftDeleteFields } from "@/lib/api/types";
 import { tr } from "@/lib/i18n/tr";
+import { cn } from "@/lib/utils";
 
 export type FieldConfig = {
   name: string;
@@ -46,6 +47,12 @@ export type FieldConfig = {
   options?: { value: string; label: string }[];
   required?: boolean;
   hideOnEdit?: boolean;
+  /** Default for checkbox fields; defaults to true when omitted. */
+  checkboxDefault?: boolean;
+  /** Hide this field while the dialog form matches. */
+  hidden?: (form: Record<string, unknown>) => boolean;
+  /** Clear these form fields when this checkbox is turned on. */
+  clearFieldsWhenChecked?: string[];
 };
 
 export type ColumnConfig<T> = {
@@ -56,6 +63,7 @@ export type ColumnConfig<T> = {
 
 type ResourcePageProps<T extends { id: string } & Partial<SoftDeleteFields>> = {
   title: string;
+  hideTitle?: boolean;
   queryKey: string[];
   canWrite: boolean;
   canAdmin: boolean;
@@ -72,6 +80,7 @@ type ResourcePageProps<T extends { id: string } & Partial<SoftDeleteFields>> = {
 
 export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields>>({
   title,
+  hideTitle = false,
   queryKey,
   canWrite,
   canAdmin,
@@ -141,7 +150,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
     setEditing(null);
     const initial: Record<string, unknown> = {};
     fields.forEach((f) => {
-      if (f.type === "checkbox") initial[f.name] = true;
+      if (f.type === "checkbox") initial[f.name] = f.checkboxDefault ?? true;
     });
     setForm(initial);
     setOpen(true);
@@ -157,8 +166,13 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
 
   return (
     <div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <div
+        className={cn(
+          "mb-4 flex flex-col gap-3 sm:flex-row sm:items-center",
+          hideTitle ? "sm:justify-end" : "sm:justify-between",
+        )}
+      >
+        {!hideTitle && <h2 className="text-lg font-semibold">{title}</h2>}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           {softDelete && canAdmin && (
             <div className="flex items-center gap-2 text-sm">
@@ -285,6 +299,7 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
           <div className="space-y-3 py-2">
             {fields
               .filter((field) => !(editing && field.hideOnEdit))
+              .filter((field) => !field.hidden?.(form))
               .map((field) => (
               <div key={field.name} className="space-y-1">
                 <Label>{field.label}</Label>
@@ -314,7 +329,15 @@ export function ResourcePage<T extends { id: string } & Partial<SoftDeleteFields
                   <Switch
                     checked={Boolean(form[field.name])}
                     onCheckedChange={(v) =>
-                      setForm((f) => ({ ...f, [field.name]: v }))
+                      setForm((f) => {
+                        const next = { ...f, [field.name]: v };
+                        if (v && field.clearFieldsWhenChecked) {
+                          for (const key of field.clearFieldsWhenChecked) {
+                            next[key] = "";
+                          }
+                        }
+                        return next;
+                      })
                     }
                   />
                 ) : (

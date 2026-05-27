@@ -83,6 +83,9 @@ class Unit(UUIDModel, TimeStampedModel, AuditedModel, SoftDeleteModel):
     )
     unit_number = models.CharField(max_length=64)
     floor = models.IntegerField(null=True, blank=True)
+    floor_label = models.CharField(max_length=64, blank=True)
+    position_on_floor = models.PositiveSmallIntegerField(null=True, blank=True)
+    is_roof_level = models.BooleanField(default=False)
     gross_area_m2 = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -110,6 +113,10 @@ class Unit(UUIDModel, TimeStampedModel, AuditedModel, SoftDeleteModel):
         super().clean()
         if self.block_id and self.project_id and self.block.project_id != self.project_id:
             raise ValidationError({"block": "Block must belong to the same project."})
+        if self.position_on_floor is not None and self.position_on_floor not in (1, 2):
+            raise ValidationError(
+                {"position_on_floor": "Position must be 1 (left) or 2 (right)."}
+            )
 
     def save(self, *args, **kwargs):
         self.full_clean()

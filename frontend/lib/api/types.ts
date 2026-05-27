@@ -72,6 +72,9 @@ export interface Unit extends SoftDeleteFields {
   block: string | null;
   unit_number: string;
   floor: number | null;
+  floor_label: string;
+  position_on_floor: number | null;
+  is_roof_level: boolean;
   gross_area_m2: string | null;
   notes: string;
   status: string;
